@@ -6,7 +6,7 @@
   "bin": "./bin/index.js",
   "scripts": {
     "start": "node ./bin/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "standard && dependency-check ."
   },
   "repository": {
     "type": "git",
@@ -37,5 +37,9 @@
     "toiletdb": "^1.2.1",
     "untildify": "^3.0.2",
     "vhost": "^3.0.2"
+  },
+  "devDependencies": {
+    "dependency-check": "^2.9.1",
+    "standard": "^10.0.3"
   }
 }
