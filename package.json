@@ -1,11 +1,11 @@
 {
   "name": "dathttpd",
-  "version": "3.1.2",
+  "version": "3.2.0",
   "description": "Host Dat sites over HTTPs and Dat with DNS hostnames and zero-config TLS (via LetsEncrypt).",
-  "main": "index.js",
-  "bin": "index.js",
+  "main": "./lib/index.js",
+  "bin": "./bin/index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node ./bin/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

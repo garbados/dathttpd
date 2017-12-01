@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var manager = require('./lib/manager')
+var manager = require('../lib/manager')
 
 run()
 function run () {
