@@ -26,6 +26,7 @@
   "dependencies": {
     "express": "^4.15.4",
     "greenlock-express": "^2.0.9",
+    "hostile": "^1.3.0",
     "http-proxy": "^1.16.2",
     "js-yaml": "^3.9.1",
     "mkdirp": "^0.5.1",
