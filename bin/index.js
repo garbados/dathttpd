@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 
 var manager = require('../lib/manager')
+var pkg = require('../package.json')
 
-run()
-function run () {
-  if (process.argv[2]) {
-    return usage()
-  }
-
-  // start server
-  manager.start()
-}
-
-function usage () {
-  console.log(`dathttpd - starts the server
-Env Vars:
-   DATHTTPD_CONFIG=~/dathttpd.yml - location of the config file`)
-}
+require('yargs')
+  .version(pkg.version)
+  .option('config', {
+    alias: 'c',
+    description: 'Path to a configuration file in YAML for DatHTTPD.',
+    default: manager.CFG_PATH
+  })
+  .command({
+    command: '$0',
+    desc: 'Start the server.',
+    handler: (argv) => {
+      manager.start(argv.config)
+    }
+  })
+  .alias('help', 'h')
+  .parse()
