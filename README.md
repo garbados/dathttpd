@@ -2,33 +2,37 @@
 
 A Web server for [Dat](https://datprotocol.com) and HTTPS.
 
-Dat sites are hosted at public keys, which are the equivalent of IP addresses in the P2P network. The pubkeys are ugly, though! Wouldn't it be nice if your dats could have nice DNS shortnames, and also rehost over HTTPS for people still on legacy browsers?
+This is a divergent fork of [beakerbrowser/dathttpd](https://github.com/beakerbrowser/dathttpd), meaning I hope to issue PRs from it but organizing changes into PRs takes time I might rather put into building more features. If this package diverges to the point that it's really a separate project, I'll rename it.
 
-dathttpd is for you!
+Here are the fork's current intended additional features:
 
- - Serve sites over Dat at `dat://{subdomain}.{yourdomain.com}`.
- - Rehost those sites over `https://{subdomain}.{yourdomain.com}`.
- - Get TLS certs automatically with Let's Encrypt.
- - (Optionally) Auto-redirect from https -> dat.
- - [Metrics dashboard](#metrics-dashboard)
+- [x] Provide a setting `localhost` for users running DatHTTPD on client environments, e.g. their computer. [The current implementation](https://github.com/garbados/dathttpd/commit/15302808f6dd81c23fca5544015af99ca092b597) creates hostfile entries for each site in the `sites` portion of the config, so that users can visit these sites in their browser without sending traffic over the internet and without using external DNS records. *Note: Modifying the user's hostfile (ex: /etc/hosts) requires the use of sudo or otherwise having root permissions, which is an awful lot of trust to require from a user. I'd rather find a different solution that requires fewer privileges.*
+- [ ] Provide a setting `peersites` which, if set to a truthy value, creates and peers an archive containing only a `dat.json` file whose `sites` attribute maps to the `sites` portion of your DatHTTPD config file.
+- [ ] Provide a setting `sitelists` that interprets a list of URLs (`dat://` or otherwise) as archives which contain the `sites` portion of a DatHTTPD config file as the `sites` attribute of the archive's `dat.json`.
+- [ ] CLI commands for modifying the local config, such as the `sites` and `sitelists` attributes.
+- [ ] A substantial test suite with coverage above 80%.
 
-## Getting started
+The goal is to allow people to share content and web applications at human-readable names with friends by relying on each other for domain name resolution, rather than centralized or authoritative systems. Visiting sites rehosted by a locally-running instance of DatHTTPD means your traffic never leaves your computer, and you can visit these sites using any browser that recognizes your hostfile.
 
-### Start hosting your website with Dat
+## Install
 
-You can use the [Dat CLI](https://www.npmjs.com/package/dat) or the [Beaker
-Browser](https://github.com/beakerbrowser/beaker).
+DatHTTPD has some dependencies. On systems with `apt-get` like Ubuntu, you can install them like this:
 
-After uploading your site to a Dat archive, identify the archive's URL. You'll
-need this for your dathttpd config.
+```
+sudo apt-get install libtool m4 automake
+```
 
-### Update your DNS records
+You can then install DatHTTPD with [npm](https://www.npmjs.com/):
 
-Create an A record that points to your server's IP address.
+```
+npm i -g dathttpd
+```
+
+Now you can run `dathttpd`. Try running `dathttpd -h` for usage information.
 
 ## Usage
 
-On your server, create a config file at `~/.dathttpd.yml`:
+First, create a config file at `~/.dathttpd.yml`:
 
 ```yaml
 letsencrypt:
@@ -43,31 +47,26 @@ sites:
     datOnly: true
 ```
 
-Then run
+Then give node permissions to use ports 80 and 443:
 
 ```
-# install build dependencies
-sudo apt-get install libtool m4 automake
-
-# install dathttpd (https://docs.npmjs.com/getting-started/fixing-npm-permissions)
-npm install -g dathttpd
-
-# give node perms to use ports 80 and 443
 sudo setcap cap_net_bind_service=+ep `readlink -f \`which node\``
+```
 
-# start dathttpd
+Then you can start `dathttpd`:
+
+```
 dathttpd
 ```
 
-To daemonify the server in Debian-based systems, stop the dathttpd process and
-then run:
+To daemonify the server in Debian-based systems, stop the dathttpd process and then run:
 
 ```
 # install a helper tool
 npm install -g add-to-systemd
 
 # create a systemd entry for dathttpd
-sudo add-to-systemd dathttpd --user $(whoami) $(which dathttpd)
+sudo `which add-to-systemd` dathttpd --user $(whoami) `which dathttpd`
 
 # start the dathttpd service
 sudo systemctl start dathttpd
@@ -193,4 +192,10 @@ scrape_configs:
       - targets: ['localhost:8089']
 ```
 
-Report any issues you have along the way!
+## Contributing
+
+[Report any issues](https://github.com/garbados/dathttpd/issues) you have along the way!
+
+## License
+
+[MIT](./LICENSE)
