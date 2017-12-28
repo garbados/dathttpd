@@ -1,5 +1,7 @@
 # dathttpd [![stability][0]][1] [![js-standard-style][2]][3]
 
+[![build status][4]][5]
+
 A Web server for [Dat](https://datprotocol.com) and HTTPS.
 
 This is a divergent fork of [beakerbrowser/dathttpd](https://github.com/beakerbrowser/dathttpd), meaning I hope to issue PRs from it but organizing changes into PRs takes time I might rather put into building more features. If this package diverges to the point that it's really a separate project, I'll rename it.
@@ -217,3 +219,5 @@ scrape_configs:
 [1]: https://nodejs.org/api/documentation.html#documentation_stability_index
 [2]: https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square
 [3]: https://github.com/feross/standard
+[4]: https://img.shields.io/travis/garbados/dathttpd/master.svg?style=flat-square
+[5]: https://travis-ci.org/garbados/dathttpd
