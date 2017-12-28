@@ -1,4 +1,4 @@
-# dathttpd
+# dathttpd [![stability][0]][1] [![js-standard-style][2]][3]
 
 A Web server for [Dat](https://datprotocol.com) and HTTPS.
 
@@ -204,3 +204,8 @@ scrape_configs:
 ## License
 
 [MIT](./LICENSE)
+
+[0]: https://img.shields.io/badge/stability-experimental-orange.svg?style=flat-square
+[1]: https://nodejs.org/api/documentation.html#documentation_stability_index
+[2]: https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square
+[3]: https://github.com/feross/standard
