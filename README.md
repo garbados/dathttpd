@@ -37,9 +37,6 @@ Now you can run `dathttpd`. Try running `dathttpd -h` for usage information.
 First, create a config file at `~/.dathttpd.yml`:
 
 ```yaml
-letsencrypt:
-  email: 'bob@foo.com'
-  agreeTos: true
 sites:
   dat.local:
     url: dat://1f968afe867f06b0d344c11efc23591c7f8c5fb3b4ac938d6000f330f6ee2a03/
@@ -82,13 +79,8 @@ Here's an example `~/.dathttpd.yml`:
 ports:
   http: 80
   https: 443
-  metric: 8089
 directory: ~/.dathttpd
-letsencrypt:
-  email: 'bob@foo.com'
-  agreeTos: true
 localhost: false
-metrics: true
 sites:
   dat.local:
     url: dat://1f968afe867f06b0d344c11efc23591c7f8c5fb3b4ac938d6000f330f6ee2a03/
@@ -110,35 +102,15 @@ HTTP automatically redirects to HTTPS.
 
 The port to serve the HTTPS sites. Defaults to 443. (Optional)
 
-### ports.metric
-
-The port to serve the prometheus metrics. Defaults to 8089. (Optional)
-
 ### directory
 
 The directory where dathttpd will store your Dat archive's files. Defaults to ~/.dathttpd. (Optional)
 
-### letsencrypt
-
-Settings for LetsEncrypt. If false or unset, HTTPS will be disabled.
-
-### letsencrypt.email
-
-The email to send Lets Encrypt? notices to. (Required)
-
-### letsencrypt.agreeTos
-
-Do you agree to the terms of service of Lets Encrypt? (Required, must be true)
-
 ### localhost
 
-Whether to modify the local hostfile so that requests for the domains of sites being served by DatHTTPD resolve to localhost. Defaults to false. (Optional)
+Whether to modify the local hostfile so that requests for the domains of sites being served by DatHTTPD resolve to localhost. Defaults to true. (Optional)
 
 This way, sites served by DatHTTPD will be available on your computer at their given domain names without the use of external DNS records. This is useful when you are running DatHTTPD locally rather than on a remote server, and you don't want to rely on external DNS.
-
-### metrics
-
-Whether to run the metrics server. Defaults to true. (Optional)
 
 ### peersites
 
@@ -176,36 +148,6 @@ If true, serve the [HSTS header](https://en.wikipedia.org/wiki/HTTP_Strict_Trans
 
   - `DATHTTPD_CONFIG=cfg_file_path` specify an alternative path to the config than `~/.dathttpd.yml`
   - `NODE_ENV=debug|staging|production` set to `debug` or `staging` to use the lets-encrypt testing servers.
-
-## Metrics Dashboard
-
-DatHTTPD has built-in support for [Prometheus](https://prometheus.io), which can be visualized by [Grafana](http://grafana.org/).
-
-![./grafana-screenshot.png](./grafana-screenshot.png)
-
-DatHTTPD exposes its metrics at port 8089. Prometheus periodically scrapes the metrics, and stores them in a database. Grafana provides a nice dashboard. It's a little daunting at first, but setup should be relatively painless.
-
-Follow these steps:
-
- 1. [Install Prometheus](https://prometheus.io/download/) on your server.
- 2. [Install Grafana](http://grafana.org/download/) on your server.
- 3. Update the `prometheus.yml` config.
- 4. Start prometheus and grafana.
- 5. Login to grafana.
- 6. Add prometheus as a data source to grafana. (It should be running at localhost:9090.)
- 7. Import [this grafana dashboard](./grafana-dashboard.json).
-
-Your prometheus.yml config should include have the scrape_configs set like this:
-
-```yml
-scrape_configs:
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:9090']
-  - job_name: 'dathttpd'
-    static_configs:
-      - targets: ['localhost:8089']
-```
 
 ## Contributing
 
