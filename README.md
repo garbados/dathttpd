@@ -1,157 +1,107 @@
-# dathttpd [![stability][0]][1] [![js-standard-style][2]][3]
+# DatBoi [![stability][0]][1] [![js-standard-style][2]][3]
 
 [![build status][4]][5]
 
-A Web server for [Dat](https://datprotocol.com) and HTTPS.
+A local-only, offline-first web server for [Dat](https://datprotocol.com) archives.
 
-This is a divergent fork of [beakerbrowser/dathttpd](https://github.com/beakerbrowser/dathttpd), meaning I hope to issue PRs from it but organizing changes into PRs takes time I might rather put into building more features. If this package diverges to the point that it's really a separate project, I'll rename it.
+Here's a usage example:
 
-Here are the fork's current intended additional features:
+```
+$ npm i -g dat-boi
+$ dat-boi start &
+$ dat-boi site add home.bovid dat://c33bc8d7c32a6e905905efdbf21efea9ff23b00d1c3ee9aea80092eaba6c4957/
+$ curl home.bovid
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-- [x] Provide a setting `localhost` for users running DatHTTPD on client environments, e.g. their computer. [The current implementation](https://github.com/garbados/dathttpd/commit/15302808f6dd81c23fca5544015af99ca092b597) creates hostfile entries for each site in the `sites` portion of the config, so that users can visit these sites in their browser without sending traffic over the internet and without using external DNS records. *Note: Modifying the user's hostfile (ex: /etc/hosts) requires the use of sudo or otherwise having root permissions, which is an awful lot of trust to require from a user. I'd rather find a different solution that requires fewer privileges.*
-- [x] Provide a setting `peersites` which, if set to a truthy value, creates and peers an archive containing only a `dat.json` file whose `sites` attribute maps to the `sites` portion of your DatHTTPD config file. [The current implementation](https://github.com/garbados/dathttpd/pull/1/commits/f492e46c44dd5c9b0853117ae43b048e92d863ac) treats the server's storage directory as the archive, using a `.datignore` file to share only a `dat.json` which contains only a `sites` attribute.
-- [x] Provide a setting `sitelists` that interprets a list of URLs (`dat://` or otherwise) as archives which contain the `sites` portion of a DatHTTPD config file as the `sites` attribute of the archive's `dat.json`. [The current implementation](https://github.com/garbados/dathttpd/pull/1/commits/f492e46c44dd5c9b0853117ae43b048e92d863ac#diff-c945a46d13b34fcaff544d966cffcabaR114) collects manifests from each sitelist archive and merges their `sites` attributes into `this.remotesites`, which is then interpreted just like `this.sites`.
-- [ ] CLI commands for modifying the local config, such as the `sites` and `sitelists` attributes.
-- [ ] A substantial test suite with coverage above 80%.
+  <!-- about -->
 
-The goal is to allow people to share content and web applications at human-readable names with friends by relying on each other for domain name resolution, rather than centralized or authoritative systems. Visiting sites rehosted by a locally-running instance of DatHTTPD means your traffic never leaves your computer, and you can visit these sites using any browser that recognizes your hostfile.
+  <meta name="description" content="Cows are the silent jury in the trial of mankind.">
+...
+```
+
+DatBoi allows you to bind arbitrary domain names to Dat archives. It rehosts these archives locally so that visiting these domain names with a browser serves content right from your computer. This keeps your traffic private, eliminates network latency, and subverts DNS so you never have to buy another domain.
+
+To do this, DatBoi binds to port 80 and adds entries to your local hostfile that map these domain names to 127.0.0.1. It requires root permissions, such as by running with `sudo`. I hope to find [a better way](https://github.com/garbados/dat-boi/issues/8).
+
+You can also use DatBoi to share your domains with others, and to add their domains to your local instance. Here is an example:
+
+```
+$ dat-boi sitelist add [key]
+# curl secret.blog
+<!DOCTYPE html>
+...
+```
+
+The goal is to allow people to share content and web applications at human-readable names with friends by relying on each other for domain name resolution rather than centralized or authoritative systems. Visiting sites rehosted by a locally-running instance of DatBoi means your traffic never leaves your computer, and you can visit these sites using any browser that recognizes your hostfile.
 
 ## Install
 
-DatHTTPD has some dependencies. On systems with `apt-get` like Ubuntu, you can install them like this:
+You can install DatBoi with [npm](https://www.npmjs.com/):
 
 ```
-sudo apt-get install libtool m4 automake
+npm i -g dat-boi
 ```
 
-You can then install DatHTTPD with [npm](https://www.npmjs.com/):
-
-```
-npm i -g dathttpd
-```
-
-Now you can run `dathttpd`. Try running `dathttpd -h` for usage information.
+Now you can run `dat-boi`. Try running `dat-boi -h` for usage information.
 
 ## Usage
 
-First, create a config file at `~/.dathttpd.yml`:
-
-```yaml
-sites:
-  dat.local:
-    url: dat://1f968afe867f06b0d344c11efc23591c7f8c5fb3b4ac938d6000f330f6ee2a03/
-    datOnly: false
-  datprotocol.dat.local:
-    url: dat://ff34725120b2f3c5bd5028e4f61d14a45a22af48a7b12126d5d588becde88a93/
-    datOnly: true
-```
-
-Then give node permissions to use ports 80 and 443:
+When you first run `dat-boi` you can either pass it a config file with `-c, --config` or it will prompt you for some basics:
 
 ```
-sudo setcap cap_net_bind_service=+ep `readlink -f \`which node\``
+$ dat-boi -c ~/.dat-boi.json
+# or
+$ dat-boi
+Where should DatBoi store archives? (default: ~/.dat-boi.json)
+>
+...
 ```
 
-Then you can start `dathttpd`:
+Once `dat-boi` is running, you can other CLI commands to update its configuration, such as by adding sites. The running instance watches its config for changes and updates itself accordingly. So, you can immediately start adding sites and sitelists:
 
 ```
-dathttpd
 ```
 
-To daemonify the server in Debian-based systems, stop the dathttpd process and then run:
+To daemonify DatBoi on systems that use systemd, you can use [add-to-systemd](https://www.npmjs.com/package/add-to-systemd):
 
 ```
-# install a helper tool
+# install the helper tool
 npm install -g add-to-systemd
 
-# create a systemd entry for dathttpd
-sudo `which add-to-systemd` dathttpd --user $(whoami) `which dathttpd`
+# create a systemd entry for dat-boi
+add-to-systemd dat-boi --user $(whoami) `which dat-boi`
 
-# start the dathttpd service
-sudo systemctl start dathttpd
+# start the dat-boi service
+sudo systemctl start dat-boi
 ```
 
-## Config
+### Options and Commands
 
-Here's an example `~/.dathttpd.yml`:
+Options:
 
-```yaml
-ports:
-  http: 80
-  https: 443
-directory: ~/.dathttpd
-localhost: false
-sites:
-  dat.local:
-    url: dat://1f968afe867f06b0d344c11efc23591c7f8c5fb3b4ac938d6000f330f6ee2a03/
-    datOnly: false
-  datprotocol.dat.local:
-    url: dat://ff34725120b2f3c5bd5028e4f61d14a45a22af48a7b12126d5d588becde88a93/
-    datOnly: true
-  proxy.local:
-    proxy: http://localhost:8080
-```
+- `-c, --config`: Path to a JSON file to use to configure DatBoi. Default: `~/.dat-boi.json`
+- `-d, --directory`: Path to a directory in which to store archives and metadata. Default: `~/.dat-boi`
+- `-h, --help`: Print usage information and exit.
 
-### ports.http
+Commands:
 
-The port to serve the HTTP sites. Defaults to 80. (Optional)
+- `start [options]`: An alias of the default command. Starts the server. It has some options specific to it:
+    - `-P, --peer`: If set, DatBoi will peer the user's `sites` config as an archive that others can use as a sitelist.
+    - `-U, --no-upload`: If set, DatBoi will not upload data to peers. It will only perform downloads.
+- `site add <domain> <url>`: Add a site that resolves the given domain to the Dat archive behind the given URL.
+- `site remove <domain>`: Remove a site and its hostfile entry. If no other site references its archive, it will be removed too.
+- `sitelist add <url>`: Add a sitelist and all of its site entries.
+- `sitelist remove <url>`: Remove a sitelist and all of its site entries. Archives which are not referenced by any remaining site are also removed.
 
-HTTP automatically redirects to HTTPS.
-
-### ports.https
-
-The port to serve the HTTPS sites. Defaults to 443. (Optional)
-
-### directory
-
-The directory where dathttpd will store your Dat archive's files. Defaults to ~/.dathttpd. (Optional)
-
-### localhost
-
-Whether to modify the local hostfile so that requests for the domains of sites being served by DatHTTPD resolve to localhost. Defaults to true. (Optional)
-
-This way, sites served by DatHTTPD will be available on your computer at their given domain names without the use of external DNS records. This is useful when you are running DatHTTPD locally rather than on a remote server, and you don't want to rely on external DNS.
-
-### peersites
-
-Whether to peer the user's `sites` config as an archive. If set to true, DatHTTPD will print the key of the archive of the user's sitelist. Friends can use this key to include your sites on their local DatHTTPD instance.
-
-### sitelists
-
-An array of `dat://` addresses for archives with a `dat.json` file whose `sites` attribute corresponds to the `sites` portion of a DatHTTPD config. Archives specified in `sitelists` have their sites added to the users' own.
-
-### sites
-
-A listing of the sites to host. Each site is labeled (keyed) by the hostname you want the site to serve at.
-
-Sites can either host dat archives or proxy to a URL. To make a dat-site, set the `url` attribute. To make a proxy, set the `proxy` attribute.
-
-You'll need to configure the DNS entry for the hostname to point to the server. For instance, if using `site.myhostname.com`, you'll need a DNS entry pointing `site.myhostname.com` to the server.
-
-### sites.{hostname}.url
-
-The Dat URL of the site to host.
-
-### sites.{hostname}.proxy
-
-The HTTP URL of the site to proxy.
-
-### sites.{hostname}.datOnly
-
-If true, rather than serve the assets over HTTPS, dathttpd will serve a redirect to the dat:// location. Defaults to false. (Optional)
-
-### sites.{hostname}.hsts
-
-If true, serve the [HSTS header](https://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security). You can specify how long the strict-transport rule lasts as the value. (parsed using [the ms module](https://www.npmjs.com/package/ms)). If `true` is given, will default to 7 days. Defaults to false. (Optional)
-
-## Env Vars
-
-  - `DATHTTPD_CONFIG=cfg_file_path` specify an alternative path to the config than `~/.dathttpd.yml`
-  - `NODE_ENV=debug|staging|production` set to `debug` or `staging` to use the lets-encrypt testing servers.
+You can also run `dat-boi -h` to print this usage information.
 
 ## Contributing
 
-[Report any issues](https://github.com/garbados/dathttpd/issues) you have along the way!
+[Report any issues](https://github.com/garbados/dat-boi/issues) you have along the way!
 
 ## License
 
@@ -161,5 +111,5 @@ If true, serve the [HSTS header](https://en.wikipedia.org/wiki/HTTP_Strict_Trans
 [1]: https://nodejs.org/api/documentation.html#documentation_stability_index
 [2]: https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square
 [3]: https://github.com/feross/standard
-[4]: https://img.shields.io/travis/garbados/dathttpd/master.svg?style=flat-square
-[5]: https://travis-ci.org/garbados/dathttpd
+[4]: https://img.shields.io/travis/garbados/dat-boi/master.svg?style=flat-square
+[5]: https://travis-ci.org/garbados/dat-boi
