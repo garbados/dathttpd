@@ -6,7 +6,7 @@
   "bin": "./bin/index.js",
   "scripts": {
     "start": "node ./bin/index.js",
-    "test": "standard && dependency-check ."
+    "test": "standard && dependency-check . --unused --no-dev"
   },
   "repository": {
     "type": "git",
