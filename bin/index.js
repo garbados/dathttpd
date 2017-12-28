@@ -12,6 +12,7 @@ require('yargs')
   })
   .command({
     command: '$0',
+    aliases: ['start'],
     desc: 'Start the server.',
     handler: (argv) => {
       manager.start(argv.config)
