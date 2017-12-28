@@ -86,6 +86,7 @@ letsencrypt:
   email: 'bob@foo.com'
   agreeTos: true
 localhost: false
+metrics: true
 sites:
   dat.local:
     url: dat://1f968afe867f06b0d344c11efc23591c7f8c5fb3b4ac938d6000f330f6ee2a03/
@@ -132,6 +133,10 @@ Do you agree to the terms of service of Lets Encrypt? (Required, must be true)
 Whether to modify the local hostfile so that requests for the domains of sites being served by DatHTTPD resolve to localhost. Defaults to false. (Optional)
 
 This way, sites served by DatHTTPD will be available on your computer at their given domain names without the use of external DNS records. This is useful when you are running DatHTTPD locally rather than on a remote server, and you don't want to rely on external DNS.
+
+### metrics
+
+Whether to run the metrics server. Defaults to true. (Optional)
 
 ### sites
 
