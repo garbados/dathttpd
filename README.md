@@ -7,8 +7,8 @@ This is a divergent fork of [beakerbrowser/dathttpd](https://github.com/beakerbr
 Here are the fork's current intended additional features:
 
 - [x] Provide a setting `localhost` for users running DatHTTPD on client environments, e.g. their computer. [The current implementation](https://github.com/garbados/dathttpd/commit/15302808f6dd81c23fca5544015af99ca092b597) creates hostfile entries for each site in the `sites` portion of the config, so that users can visit these sites in their browser without sending traffic over the internet and without using external DNS records. *Note: Modifying the user's hostfile (ex: /etc/hosts) requires the use of sudo or otherwise having root permissions, which is an awful lot of trust to require from a user. I'd rather find a different solution that requires fewer privileges.*
-- [ ] Provide a setting `peersites` which, if set to a truthy value, creates and peers an archive containing only a `dat.json` file whose `sites` attribute maps to the `sites` portion of your DatHTTPD config file.
-- [ ] Provide a setting `sitelists` that interprets a list of URLs (`dat://` or otherwise) as archives which contain the `sites` portion of a DatHTTPD config file as the `sites` attribute of the archive's `dat.json`.
+- [x] Provide a setting `peersites` which, if set to a truthy value, creates and peers an archive containing only a `dat.json` file whose `sites` attribute maps to the `sites` portion of your DatHTTPD config file. [The current implementation](https://github.com/garbados/dathttpd/pull/1/commits/f492e46c44dd5c9b0853117ae43b048e92d863ac) treats the server's storage directory as the archive, using a `.datignore` file to share only a `dat.json` which contains only a `sites` attribute.
+- [x] Provide a setting `sitelists` that interprets a list of URLs (`dat://` or otherwise) as archives which contain the `sites` portion of a DatHTTPD config file as the `sites` attribute of the archive's `dat.json`. [The current implementation](https://github.com/garbados/dathttpd/pull/1/commits/f492e46c44dd5c9b0853117ae43b048e92d863ac#diff-c945a46d13b34fcaff544d966cffcabaR114) collects manifests from each sitelist archive and merges their `sites` attributes into `this.remotesites`, which is then interpreted just like `this.sites`.
 - [ ] CLI commands for modifying the local config, such as the `sites` and `sitelists` attributes.
 - [ ] A substantial test suite with coverage above 80%.
 
@@ -137,6 +137,14 @@ This way, sites served by DatHTTPD will be available on your computer at their g
 ### metrics
 
 Whether to run the metrics server. Defaults to true. (Optional)
+
+### peersites
+
+Whether to peer the user's `sites` config as an archive. If set to true, DatHTTPD will print the key of the archive of the user's sitelist. Friends can use this key to include your sites on their local DatHTTPD instance.
+
+### sitelists
+
+An array of `dat://` addresses for archives with a `dat.json` file whose `sites` attribute corresponds to the `sites` portion of a DatHTTPD config. Archives specified in `sitelists` have their sites added to the users' own.
 
 ### sites
 
