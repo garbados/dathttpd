@@ -64,6 +64,8 @@ Where should DatBoi store archives? (default: ~/.dat-boi.json)
 Once `dat-boi` is running, you can other CLI commands to update its configuration, such as by adding sites. The running instance watches its config for changes and updates itself accordingly. So, you can immediately start adding sites and sitelists:
 
 ```
+$ dat-boi site add <domain> <url>
+$ dat-boi sitelist add <url>
 ```
 
 To daemonify DatBoi on systems that use systemd, you can use [add-to-systemd](https://www.npmjs.com/package/add-to-systemd):
@@ -92,6 +94,7 @@ Commands:
 - `start [options]`: An alias of the default command. Starts the server. It has some options specific to it:
     - `-P, --peer`: If set, DatBoi will peer the user's `sites` config as an archive that others can use as a sitelist.
     - `-U, --no-upload`: If set, DatBoi will not upload data to peers. It will only perform downloads.
+- `list`: Lists all sites DatBoi knows about whether via the local sitelist or remote ones.
 - `site add <domain> <url>`: Add a site that resolves the given domain to the Dat archive behind the given URL.
 - `site remove <domain>`: Remove a site and its hostfile entry. If no other site references its archive, it will be removed too.
 - `sitelist add <url>`: Add a sitelist and all of its site entries.
