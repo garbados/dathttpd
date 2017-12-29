@@ -1,7 +1,7 @@
 'use strict'
 
 // TODO debug
-// TODO remove hostfile entries when sites are removed
+// TODO jsdoc
 
 const _ = require('lodash')
 const async = require('async')
@@ -89,6 +89,62 @@ module.exports = class DatBoi {
     }, done)
   }
 
+  start (done) {
+    async.series([
+      this.init.bind(this),
+      this.cleanArchives.bind(this),
+      (done) => {
+        this.server = http.createServer(this.app)
+        this.server.listen(this.port, done)
+      },
+      (done) => {
+        // restart when config changes
+        this.watcher = fs.watch(this.configPath)
+        this.watcher.on('change', () => {
+          this.restart()
+        })
+        // restart when sitelists change
+        let dats = this.multidat.list()
+        let tasks = this.siteLists.map((key) => {
+          let dat = dats.filter((dat) => { return dat.key.toString('hex') === key })[0]
+          return (done) => {
+            dat.archive.once('ready', () => {
+              dat.archive.metadata.update(() => {
+                done()
+              })
+            })
+          }
+        })
+        async.race(tasks, (err) => {
+          if (err) throw err
+          this.restart()
+        })
+        done()
+      }
+    ], done)
+  }
+
+  stop (done) {
+    this.watcher.close()
+    async.parallel([
+      (done) => {
+        async.each(this.multidat.list(), (buf, done) => {
+          this.multidat.close(buf, done)
+        }, done)
+      },
+      (done) => {
+        this.server.close(done)
+      }
+    ], done)
+  }
+
+  restart (done) {
+    async.series([
+      this.stop.bind(this),
+      this.start.bind(this)
+    ], done)
+  }
+
   peerSiteList (done) {
     if (this.peersites) {
       let joinDir = path.join.bind(path, this.directory)
@@ -117,18 +173,24 @@ module.exports = class DatBoi {
     let dats = this.multidat.list()
     async.each(Object.keys(sites), (hostname, done) => {
       let initSite = (dat, site) => {
-        dat.joinNetwork(this.netOptions)
-        this.app.use(vhost(hostname, DatBoi.createSiteApp(site)))
-        done()
+        dat.joinNetwork(this.netOptions, (err) => {
+          if (err) return done(err)
+          let app = DatBoi.createSiteApp(site)
+          this.app.use(vhost(site.hostname, app))
+          done()
+        })
       }
 
       let site = sites[hostname]
+      site.hostname = hostname
       DatBoi.validateSiteCfg(site)
 
-      if (site.url) {
+      if (site.url || site.directory) {
         hostile.set(LOCALHOST, hostname)
-        site.directory = site.directory || path.join(this.directory, hostname)
+      }
+      if (site.url) {
         site.key = site.key || DatBoi.getDatKey(site.url) // TODO use dat-link-resolve instead
+        site.directory = site.directory || path.join(this.directory, hostname)
         let dat = dats.find(d => d.key.toString('hex') === site.key)
         if (dat) {
           initSite(dat, site)
@@ -142,13 +204,11 @@ module.exports = class DatBoi {
       } else if (site.directory) {
         this.multidat.create(site.directory, this.datOptions, (err, dat) => {
           if (err) return done(err)
-          site.url = `dat://${dat.key.toString('hex')}`
+          site.key = dat.key.toString('hex')
+          site.url = `dat://${site.key}`
           dat.importFiles()
           initSite(dat, site)
         })
-      } else {
-        // do not act on sites without a `url` property
-        done()
       }
     }, (err) => {
       if (err) return done(err)
@@ -158,17 +218,19 @@ module.exports = class DatBoi {
 
   loadSiteLists (sitelists, done) {
     let remoteSites = {}
+    let dats = this.multidat.list()
     async.each(sitelists, (sitelist, done) => {
       let key = DatBoi.getDatKey(sitelist)
 
       async.waterfall([
         (done) => {
-          let dats = this.multidat.list()
           var dat = dats.find(d => d.key.toString('hex') === key)
           if (dat) {
             done(null, dat)
           } else {
-            this.multidat.create(path.join(this.directory, key), { key }, done)
+            let datPath = path.join(this.directory, key)
+            let datOptions = _.extend(this.datOptions, { key, sparse: true })
+            this.multidat.create(datPath, datOptions, done)
           }
         },
         (dat, done) => {
@@ -184,43 +246,56 @@ module.exports = class DatBoi {
         done()
       })
     }, (err) => {
-      if (err) return done(err)
-      done(null, remoteSites)
+      done(err, remoteSites)
     })
   }
 
   /*
-  Remove archives not referenced by any site.
+  Remove archives not referenced by any site
+  and hostfile entries associated with deleted sites.
    */
   cleanArchives (done) {
-    let getKey = (site) => {
-      return DatBoi.getDatKey(site.url)
-    }
-    let keys = this.multidat.list().map((dat) => {
+    let datKeys = this.multidat.list().map((dat) => {
       return dat.key.toString('hex')
-    }).filter((key) => {
-      let localKeys = Object.values(this.localSites).map(getKey)
-      let remoteKeys = Object.values(this.remoteSites).map((key) => {
-        let sites = this.remoteSites[key]
-        return Object.values(sites).map(getKey)
-      }).reduce((a = [], b = []) => {
-        return a.concat(b)
-      }, [])
-      return localKeys.concat(remoteKeys).indexOf(key) === -1
     })
-    async.each(keys, (key, done) => {
-      async.series([
-        this.multidat.close.bind(this.multidat, key),
-        rimraf.bind(rimraf, path.join(this.directory, key))
-      ], done)
-    }, done)
+    let sites = this.sites
+    let keys = sites.map((site) => {
+      return site.key
+    }).filter((key) => {
+      return datKeys.indexOf(key) === -1
+    })
+    let hostnames = sites.filter((site) => {
+      return keys.indexOf(site.key) !== -1
+    }).map((site) => {
+      return site.hostname
+    })
+    async.parallel([
+      (done) => {
+        async.each(keys, (key, done) => {
+          async.series([
+            this.multidat.close.bind(this.multidat, key),
+            rimraf.bind(rimraf, path.join(this.directory, key))
+          ], done)
+        }, done)
+      },
+      (done) => {
+        async.eachSeries(hostnames, (hostname, done) => {
+          hostile.remove(LOCALHOST, hostname, done)
+        }, done)
+      }
+    ], done)
   }
 
-  list (done) {
-    done(null, {
-      local: this.localSites,
-      remote: this.remoteSites
-    })
+  get sites () {
+    let localSites = Object.values(this.localSites)
+    let remoteSites = Object.values(this.remoteSites).map((sites) => {
+      return Object.values(sites)
+    }).reduce((a, b) => { return a.concat(b) }, [])
+    return localSites.concat(remoteSites)
+  }
+
+  get siteLists () {
+    return Object.keys(this.remoteSites)
   }
 
   addSite (domain, key, options = {}, done) {
@@ -275,53 +350,12 @@ module.exports = class DatBoi {
     ], done)
   }
 
-  start (done) {
-    async.series([
-      this.init.bind(this),
-      this.cleanArchives.bind(this),
-      (done) => {
-        this.server = http.createServer(this.app)
-        this.server.listen(this.port)
-        this.server.once('listening', done)
-      },
-      (done) => {
-        this.watcher = fs.watch(this.configPath)
-        this.watcher.on('change', () => {
-          this.restart()
-        })
-        done()
-      }
-      // TODO watch sitelists and reload on change
-    ], done)
-  }
-
-  stop (done) {
-    this.watcher.close()
-    async.parallel([
-      (done) => {
-        async.each(this.multidat.list(), (buf, done) => {
-          this.multidat.close(buf, done)
-        }, done)
-      },
-      (done) => {
-        this.server.close(done)
-      }
-    ], done)
-  }
-
-  restart (done) {
-    async.series([
-      this.stop.bind(this),
-      this.start.bind(this)
-    ], done)
-  }
-
   static createSiteApp (site = {}) {
     var siteApp = express()
     if (site.url) {
       // dat site
       siteApp.get('/.well-known/dat', (req, res) => {
-        res.status(200).end('dat://' + site.datKey + '/\nTTL=3600')
+        res.status(200).end('dat://' + site.key + '/\nTTL=3600')
       })
       siteApp.use(express.static(site.directory, {extensions: ['html', 'htm']}))
       siteApp.use(serveDir(site.directory, {icons: true}))
