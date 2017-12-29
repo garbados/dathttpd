@@ -1,6 +1,7 @@
 'use strict'
 
 // TODO debug
+// TODO remove hostfile entries when sites are removed
 
 const _ = require('lodash')
 const async = require('async')
@@ -35,7 +36,6 @@ module.exports = class DatBoi {
     this.directory = untildify(options.directory || DIR_PATH)
     mkdirp.sync(this.directory)
     this.db = toiletdb(this.configPath)
-    this.multidatDb = toiletdb(path.join(this.directory, 'multidat.json'))
     this.peersites = options.peersites || false
     this.datOptions = _.extend(DAT_OPTIONS, options.dat || {})
     this.netOptions = _.extend(NET_OPTIONS, options.net || {})
@@ -50,16 +50,17 @@ module.exports = class DatBoi {
           if (err) return done(err)
           if (Object.keys(data).length === 0) {
             async.series([
-              this.db.write.bind(this.db, 'sites', {}),
-              this.db.write.bind(this.db, 'sitelists', [])
+              (done) => { this.db.write('sites', {}, done) },
+              (done) => { this.db.write('sitelists', [], done) }
             ], done)
           } else {
             done(null, data)
           }
         })
       },
-      multidat: (done) => {
-        Multidat(this.multidatDb, this.datOptions, (err, multidat) => {
+      multidat: (db, done) => {
+        let multiDb = toiletdb(path.join(this.directory, 'multidat.json'))
+        Multidat(multiDb, this.datOptions, (err, multidat) => {
           this.multidat = multidat
           done(err, multidat)
         })
@@ -195,20 +196,18 @@ module.exports = class DatBoi {
     let getKey = (site) => {
       return DatBoi.getDatKey(site.url)
     }
-    let keys = this.multidat.list()
-      .map((buf) => {
-        return buf.toString('hex')
-      })
-      .filter((key) => {
-        let localKeys = Object.values(this.localSites).map(getKey)
-        let remoteKeys = Object.values(this.remoteSites).map((key) => {
-          let sites = this.remoteSites[key]
-          return Object.values(sites).map(getKey)
-        }).reduce((a, b) => {
-          return a.concat(b)
-        })
-        return localKeys.concat(remoteKeys).indexOf(key) === -1
-      })
+    let keys = this.multidat.list().map((dat) => {
+      return dat.key.toString('hex')
+    }).filter((key) => {
+      let localKeys = Object.values(this.localSites).map(getKey)
+      let remoteKeys = Object.values(this.remoteSites).map((key) => {
+        let sites = this.remoteSites[key]
+        return Object.values(sites).map(getKey)
+      }).reduce((a = [], b = []) => {
+        return a.concat(b)
+      }, [])
+      return localKeys.concat(remoteKeys).indexOf(key) === -1
+    })
     async.each(keys, (key, done) => {
       async.series([
         this.multidat.close.bind(this.multidat, key),
@@ -282,7 +281,8 @@ module.exports = class DatBoi {
       this.cleanArchives.bind(this),
       (done) => {
         this.server = http.createServer(this.app)
-        this.server.listen(this.port, done)
+        this.server.listen(this.port)
+        this.server.once('listening', done)
       },
       (done) => {
         this.watcher = fs.watch(this.configPath)
@@ -291,6 +291,7 @@ module.exports = class DatBoi {
         })
         done()
       }
+      // TODO watch sitelists and reload on change
     ], done)
   }
 

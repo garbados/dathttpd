@@ -16,10 +16,14 @@ require('yargs')
     desc: 'Start the server.',
     handler: (argv) => {
       let boi = new DatBoi(argv.config)
-      boi.start(function () {
-        console.log('Now running...')
-        console.log(arguments)
-        console.log(boi)
+      boi.start(function (err) {
+        if (err) {
+          console.log(err)
+        } else {
+          console.log('Now running...')
+          console.log(boi.localSites)
+          console.log(boi.remoteSites)
+        }
       })
     }
   })
