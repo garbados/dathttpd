@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const DatBoi = require('.')
+const chalk = require('chalk')
 const pkg = require('./package.json')
 
 require('yargs')
@@ -18,11 +19,16 @@ require('yargs')
       let boi = new DatBoi(argv.config)
       boi.start(function (err) {
         if (err) {
-          console.log(err)
+          console.log(chalk.red(err))
         } else {
-          console.log('Now running...')
-          console.log(boi.localSites)
-          console.log(boi.remoteSites)
+          console.log(`Now serving on port ${boi.port}:`)
+          boi.sites.forEach((site) => {
+            console.log(chalk.bold(site.hostname))
+            let fields = ['url', 'key', 'directory']
+            fields.forEach((field) => {
+              console.log(`  ${field}: ${site[field]}`)
+            })
+          })
         }
       })
     }
