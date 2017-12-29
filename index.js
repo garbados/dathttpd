@@ -102,6 +102,16 @@ module.exports = class DatBoi {
       this.init.bind(this),
       this.cleanArchives.bind(this),
       (done) => {
+        this.multidat.list().forEach((dat) => {
+          dat.joinNetwork(this.netOptions)
+        })
+        this.sites.forEach((site) => {
+          let app = DatBoi.createSiteApp(site)
+          this.app.use(vhost(site.hostname, app))
+        })
+        done()
+      },
+      (done) => {
         this.server = http.createServer(this.app)
         this.server.listen(this.port, done)
       }
@@ -170,7 +180,6 @@ module.exports = class DatBoi {
         if (err) return done(err)
         this.multidat.create(this.directory, this.datOptions, (err, dat) => {
           if (err) return done(err)
-          dat.joinNetwork(this.netOptions)
           dat.importFiles((err) => {
             if (err) return done(err)
             console.log(`Peering sites as archive at dat://${dat.key.toString('hex')}`)
@@ -188,13 +197,7 @@ module.exports = class DatBoi {
     if (!hostnames.length) return done()
     let dats = this.multidat.list()
     async.each(hostnames, (hostname, done) => {
-      let initSite = (dat, site) => {
-        debug(`Initializing ${site.hostname} from ${site.key}`)
-        dat.joinNetwork(this.netOptions)
-        this.app.use(vhost(site.hostname, DatBoi.createSiteApp(site)))
-        done()
-      }
-
+      debug(`Loading ${hostname}...`)
       let site = sites[hostname]
       site.hostname = hostname
       DatBoi.validateSiteCfg(site)
@@ -207,13 +210,10 @@ module.exports = class DatBoi {
         site.directory = site.directory || path.join(this.directory, hostname)
         let dat = dats.find(d => d.key.toString('hex') === site.key)
         if (dat) {
-          initSite(dat, site)
+          done()
         } else {
           let options = _.extend(this.datOptions, { key: site.key })
-          this.multidat.create(site.directory, options, (err, dat) => {
-            if (err) return done(err)
-            initSite(dat, site)
-          })
+          this.multidat.create(site.directory, options, done)
         }
       } else if (site.directory) {
         this.multidat.create(site.directory, this.datOptions, (err, dat) => {
@@ -221,7 +221,7 @@ module.exports = class DatBoi {
           site.key = dat.key.toString('hex')
           site.url = `dat://${site.key}`
           dat.importFiles()
-          initSite(dat, site)
+          done()
         })
       }
     }, (err) => {

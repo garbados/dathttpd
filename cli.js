@@ -22,16 +22,32 @@ require('yargs')
           console.log(chalk.red(err))
         } else {
           console.log(`Now serving on port ${boi.port}:`)
-          boi.sites.forEach((site) => {
-            console.log(chalk.bold(site.hostname))
-            let fields = ['url', 'key', 'directory']
-            fields.forEach((field) => {
-              console.log(`  ${field}: ${site[field]}`)
-            })
-          })
+          printSites(boi)
         }
+      })
+    }
+  })
+  .command({
+    command: 'list',
+    aliases: ['ls'],
+    desc: 'List all sites known to DatBoi',
+    handler: (argv) => {
+      let boi = new DatBoi(argv.config)
+      boi.init((err) => {
+        if (err) return console.log(chalk.red(err))
+        printSites(boi)
       })
     }
   })
   .alias('help', 'h')
   .parse()
+
+function printSites (boi) {
+  boi.sites.forEach((site) => {
+    console.log(chalk.bold(site.hostname))
+    let fields = ['url', 'key', 'directory']
+    fields.forEach((field) => {
+      console.log(`  ${field}: ${site[field]}`)
+    })
+  })
+}
