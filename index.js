@@ -1,6 +1,5 @@
 'use strict'
 
-// TODO debug
 // TODO jsdoc
 
 const _ = require('lodash')
@@ -17,6 +16,12 @@ const serveDir = require('serve-index')
 const toiletdb = require('toiletdb')
 const untildify = require('untildify')
 const vhost = require('vhost')
+const pkg = require('./package.json')
+const debug = require('debug')(pkg.name)
+
+if (process.env.DEBUG) {
+  require('longjohn')
+}
 
 const HOSTNAME_REGEX = /^(([a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])$/i
 const DAT_REGEX = /^dat:\/\/([0-9a-f]{64})/i
@@ -32,6 +37,7 @@ const NET_OPTIONS = {}
 
 module.exports = class DatBoi {
   constructor (options = { config: CFG_PATH, directory: DIR_PATH }) {
+    debug(`Creating new DatBoi with config: ${JSON.stringify(options)}`)
     this.configPath = untildify(options.configPath || CFG_PATH)
     this.directory = untildify(options.directory || DIR_PATH)
     mkdirp.sync(this.directory)
@@ -39,11 +45,12 @@ module.exports = class DatBoi {
     this.peersites = options.peersites || false
     this.datOptions = _.extend(DAT_OPTIONS, options.dat || {})
     this.netOptions = _.extend(NET_OPTIONS, options.net || {})
-    this.app = express()
     this.port = options.port || 80
   }
 
   init (done) {
+    debug('Initializing...')
+    this.app = express()
     async.autoInject({
       db: (done) => {
         this.db.read((err, data) => {
@@ -90,41 +97,23 @@ module.exports = class DatBoi {
   }
 
   start (done) {
+    debug('Starting...')
     async.series([
       this.init.bind(this),
       this.cleanArchives.bind(this),
       (done) => {
         this.server = http.createServer(this.app)
         this.server.listen(this.port, done)
-      },
-      (done) => {
-        // restart when config changes
-        this.watcher = fs.watch(this.configPath)
-        this.watcher.on('change', () => {
-          this.restart()
-        })
-        // restart when sitelists change
-        let dats = this.multidat.list()
-        let tasks = this.siteLists.map((key) => {
-          let dat = dats.filter((dat) => { return dat.key.toString('hex') === key })[0]
-          return (done) => {
-            dat.archive.once('ready', () => {
-              dat.archive.metadata.update(() => {
-                done()
-              })
-            })
-          }
-        })
-        async.race(tasks, (err) => {
-          if (err) throw err
-          this.restart()
-        })
-        done()
       }
-    ], done)
+    ], (err) => {
+      if (err) return done(err)
+      // this.startWatchers()
+      done()
+    })
   }
 
   stop (done) {
+    debug('Stopping...')
     this.watcher.close()
     async.parallel([
       (done) => {
@@ -139,10 +128,35 @@ module.exports = class DatBoi {
   }
 
   restart (done) {
+    debug('Restarting...')
     async.series([
       this.stop.bind(this),
       this.start.bind(this)
     ], done)
+  }
+
+  startWatchers () {
+    // restart when config changes
+    this.watcher = fs.watch(this.configPath)
+    this.watcher.on('change', () => {
+      this.restart()
+    })
+    // restart when sitelists change
+    let dats = this.multidat.list()
+    let tasks = this.siteLists.map((key) => {
+      let dat = dats.filter((dat) => { return dat.key.toString('hex') === key })[0]
+      return (done) => {
+        dat.archive.once('ready', () => {
+          dat.archive.metadata.update(() => {
+            done()
+          })
+        })
+      }
+    })
+    async.race(tasks, (err) => {
+      if (err) throw err
+      this.restart()
+    })
   }
 
   peerSiteList (done) {
@@ -170,15 +184,15 @@ module.exports = class DatBoi {
   }
 
   loadSites (sites = {}, done) {
+    let hostnames = Object.keys(sites)
+    if (!hostnames.length) return done()
     let dats = this.multidat.list()
-    async.each(Object.keys(sites), (hostname, done) => {
+    async.each(hostnames, (hostname, done) => {
       let initSite = (dat, site) => {
-        dat.joinNetwork(this.netOptions, (err) => {
-          if (err) return done(err)
-          let app = DatBoi.createSiteApp(site)
-          this.app.use(vhost(site.hostname, app))
-          done()
-        })
+        debug(`Initializing ${site.hostname} from ${site.key}`)
+        dat.joinNetwork(this.netOptions)
+        this.app.use(vhost(site.hostname, DatBoi.createSiteApp(site)))
+        done()
       }
 
       let site = sites[hostname]
