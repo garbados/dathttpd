@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const DatBoi = require('..')
-const pkg = require('../package.json')
+const DatBoi = require('.')
+const pkg = require('./package.json')
 
 require('yargs')
   .version(pkg.version)
