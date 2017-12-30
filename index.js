@@ -31,6 +31,7 @@ const DIR_PATH = process.env.DATBOI_DIRECTORY || '~/.dat-boi'
 
 const DATIGNORE = ['*', '**/*', '!dat.json'].join('\n')
 const LOCALHOST = '127.0.0.1'
+const PORT = 80
 
 const DAT_OPTIONS = {}
 const NET_OPTIONS = {}
@@ -38,14 +39,14 @@ const NET_OPTIONS = {}
 module.exports = class DatBoi {
   constructor (options = { config: CFG_PATH, directory: DIR_PATH }) {
     debug('Creating new DatBoi with config: %j', options)
-    this.configPath = untildify(options.configPath || CFG_PATH)
+    this.configPath = untildify(options.config || CFG_PATH)
     this.directory = untildify(options.directory || DIR_PATH)
     mkdirp.sync(this.directory)
     this.db = toiletdb(this.configPath)
-    this.peersites = options.peersites || false
+    this.peerSites = options.peerSites || false
     this.datOptions = _.extend({}, DAT_OPTIONS, options.dat || {})
     this.netOptions = _.extend({}, NET_OPTIONS, options.net || {})
-    this.port = options.port || 80
+    this.port = options.port || DatBoi.port
   }
 
   init (done) {
@@ -75,9 +76,6 @@ module.exports = class DatBoi {
         })
       },
       (done) => {
-        this.peerSiteList(done)
-      },
-      (done) => {
         debug('Loading local sites...')
         async.waterfall([
           this.db.read.bind(this.db, 'sites'),
@@ -99,6 +97,9 @@ module.exports = class DatBoi {
           debug('✓ Loaded remote sites')
           done(err, sitelists)
         })
+      },
+      (done) => {
+        this.peerSiteList(done)
       }
     ], (err) => {
       if (err) return done(err)
@@ -192,7 +193,7 @@ module.exports = class DatBoi {
   }
 
   peerSiteList (done) {
-    if (this.peersites) {
+    if (this.peerSites) {
       debug('Peering local sitelist...')
       let joinDir = path.join.bind(path, this.directory)
       // start peering this.sites
@@ -438,13 +439,21 @@ module.exports = class DatBoi {
     return CFG_PATH
   }
 
-  static start (configPath, done) {
-    let boi = DatBoi.create(configPath)
+  static get directory () {
+    return DIR_PATH
+  }
+
+  static get port () {
+    return PORT
+  }
+
+  static start (options, done) {
+    let boi = DatBoi.create(options)
     boi.start(done)
     return boi
   }
 
-  static create (configPath) {
-    return new DatBoi(configPath)
+  static create (options) {
+    return new DatBoi(options)
   }
 }
