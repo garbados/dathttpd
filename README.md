@@ -1,5 +1,7 @@
 # DatBoi [![stability][0]][1] [![js-standard-style][2]][3]
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/garbados/dat-boi.svg)](https://greenkeeper.io/)
+
 [![build status][4]][5]
 
 A local-only, offline-first web server for [Dat](https://datprotocol.com) archives.
