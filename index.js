@@ -66,6 +66,7 @@ module.exports = class DatBoi {
         })
       },
       multidat: (db, done) => {
+        debug('Loading multidat...')
         let multiDb = toiletdb(path.join(this.directory, 'multidat.json'))
         Multidat(multiDb, this.datOptions, (err, multidat) => {
           this.multidat = multidat
@@ -76,6 +77,7 @@ module.exports = class DatBoi {
         this.peerSiteList(done)
       },
       localSites: (multidat, done) => {
+        debug('Loading local sites...')
         async.waterfall([
           this.db.read.bind(this.db, 'sites'),
           this.loadSites.bind(this)
@@ -85,6 +87,7 @@ module.exports = class DatBoi {
         })
       },
       remoteSites: (multidat, done) => {
+        debug('Loading remote sites...')
         async.waterfall([
           this.db.read.bind(this.db, 'sitelists'),
           this.loadSiteLists.bind(this)
@@ -103,9 +106,11 @@ module.exports = class DatBoi {
       this.cleanArchives.bind(this),
       (done) => {
         this.multidat.list().forEach((dat) => {
+          debug(`Joining network for ${dat.key.toString('hex')}`)
           dat.joinNetwork(this.netOptions)
         })
         this.sites.forEach((site) => {
+          debug(`Setting up vhost for ${site.hostname}`)
           let app = DatBoi.createSiteApp(site)
           this.app.use(vhost(site.hostname, app))
         })
@@ -117,7 +122,7 @@ module.exports = class DatBoi {
       }
     ], (err) => {
       if (err) return done(err)
-      // this.startWatchers()
+      this.startWatchers()
       done()
     })
   }
@@ -127,11 +132,14 @@ module.exports = class DatBoi {
     this.watcher.close()
     async.parallel([
       (done) => {
-        async.each(this.multidat.list(), (buf, done) => {
-          this.multidat.close(buf, done)
+        debug('Stopping dats...')
+        async.each(this.multidat.list(), (dat, done) => {
+          debug(`Stopping dat ${dat.key.toString('hex')}`)
+          this.multidat.close(dat.key, done)
         }, done)
       },
       (done) => {
+        debug('Stopping server...')
         this.server.close(done)
       }
     ], done)
@@ -148,7 +156,8 @@ module.exports = class DatBoi {
   startWatchers () {
     // restart when config changes
     this.watcher = fs.watch(this.configPath)
-    this.watcher.on('change', () => {
+    this.watcher.on('change', (type, name) => {
+      debug('Restarting due to change in config...')
       this.restart()
     })
     // restart when sitelists change
@@ -156,20 +165,24 @@ module.exports = class DatBoi {
     let tasks = this.siteLists.map((key) => {
       let dat = dats.filter((dat) => { return dat.key.toString('hex') === key })[0]
       return (done) => {
-        dat.archive.once('ready', () => {
-          dat.archive.metadata.update(() => {
+        dat.archive.metadata.once('sync', () => {
+          dat.archive.metadata.once('append', () => {
             done()
           })
         })
       }
     })
-    async.race(tasks, (err) => {
-      if (err) throw err
-      this.restart()
-    })
+    if (tasks.length) {
+      async.race(tasks, (err) => {
+        if (err) throw err
+        debug('Restarting due to change in a remote sitelist...')
+        this.restart()
+      })
+    }
   }
 
   peerSiteList (done) {
+    debug('Peering local sitelist...')
     if (this.peersites) {
       let joinDir = path.join.bind(path, this.directory)
       // start peering this.sites
@@ -182,7 +195,7 @@ module.exports = class DatBoi {
           if (err) return done(err)
           dat.importFiles((err) => {
             if (err) return done(err)
-            console.log(`Peering sites as archive at dat://${dat.key.toString('hex')}`)
+            debug(`Peering local sitelist at dat://${dat.key.toString('hex')}`)
             done()
           })
         })
@@ -312,7 +325,11 @@ module.exports = class DatBoi {
     return Object.keys(this.remoteSites)
   }
 
-  addSite (domain, key, options = {}, done) {
+  addSite (domain, key, options, done) {
+    if (!done) {
+      done = options
+      options = {}
+    }
     async.waterfall([
       this.db.read.bind(this.db, 'sites'),
       (sites = {}, done) => {
