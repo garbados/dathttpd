@@ -279,7 +279,12 @@ module.exports = class DatBoi {
           this.multidat.readManifest(dat, done)
         },
         (datjson, done) => {
-          this.loadSites(datjson.sites, done)
+          let sites = {}
+          datjson.sites.forEach((site) => {
+            delete site.directory
+            sites[site.hostname] = site
+          })
+          this.loadSites(sites, done)
         }
       ], (err, sites) => {
         if (err) return done(err)
