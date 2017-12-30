@@ -8,7 +8,7 @@ require('yargs')
   .version(pkg.version)
   .option('config', {
     alias: 'c',
-    description: 'Path to a configuration file in YAML for DatHTTPD.',
+    description: 'Path to a JSON configuration file for DatBoi.',
     default: DatBoi.CFG_PATH
   })
   .command({
@@ -30,7 +30,7 @@ require('yargs')
   .command({
     command: 'list',
     aliases: ['ls'],
-    desc: 'List all sites known to DatBoi',
+    desc: 'List known sites.',
     handler: (argv) => {
       let boi = new DatBoi(argv.config)
       boi.init((err) => {
@@ -39,7 +39,32 @@ require('yargs')
       })
     }
   })
+  .command({
+    command: 'add-site <domain> <key> [options]',
+    aliases: ['add', 'a'],
+    desc: 'Add a new site.',
+    handler: (argv) => {
+      let boi = new DatBoi(argv.config)
+      boi.addSite(argv.domain, argv.key, (err) => {
+        if (err) return console.log(chalk.red(err))
+        console.log(`Added new site ${argv.domain} from ${argv.key}`)
+      })
+    }
+  })
+  .command({
+    command: 'remove-site <domain>',
+    aliases: ['remove', 'rm'],
+    desc: 'Remove a site by domain.',
+    handler: (argv) => {
+      let boi = new DatBoi(argv.config)
+      boi.removeSite(argv.domain, (err) => {
+        if (err) return console.log(chalk.red(err))
+        console.log(`Removed site ${argv.domain}`)
+      })
+    }
+  })
   .alias('help', 'h')
+  .recommendCommands()
   .parse()
 
 function printSites (boi) {
