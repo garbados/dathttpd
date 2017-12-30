@@ -1,6 +1,6 @@
 {
   "name": "@garbados/dat-boi",
-  "version": "1.0.0-alpha",
+  "version": "1.0.1-alpha",
   "description": "Host Dat sites over HTTPs and Dat with DNS hostnames and zero-config TLS (via LetsEncrypt).",
   "main": "./index.js",
   "bin": "./cli.js",
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/garbados/dathttpd.git"
+    "url": "git+https://github.com/garbados/dat-boi.git"
   },
   "keywords": [
     "dat",
@@ -23,9 +23,9 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/garbados/dathttpd/issues"
+    "url": "https://github.com/garbados/dat-boi/issues"
   },
-  "homepage": "https://github.com/garbados/dathttpd#readme",
+  "homepage": "https://github.com/garbados/dat-boi#readme",
   "dependencies": {
     "async": "^2.6.0",
     "chalk": "^2.3.0",
@@ -36,6 +36,7 @@
     "longjohn": "^0.2.12",
     "mkdirp": "^0.5.1",
     "multidat": "^5.0.1",
+    "rimraf": "^2.6.2",
     "serve-index": "^1.8.0",
     "toiletdb": "^1.2.1",
     "untildify": "^3.0.2",
