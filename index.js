@@ -37,22 +37,22 @@ const NET_OPTIONS = {}
 
 module.exports = class DatBoi {
   constructor (options = { config: CFG_PATH, directory: DIR_PATH }) {
-    debug(`Creating new DatBoi with config: ${JSON.stringify(options)}`)
+    debug('Creating new DatBoi with config: %j', options)
     this.configPath = untildify(options.configPath || CFG_PATH)
     this.directory = untildify(options.directory || DIR_PATH)
     mkdirp.sync(this.directory)
     this.db = toiletdb(this.configPath)
     this.peersites = options.peersites || false
-    this.datOptions = _.extend(DAT_OPTIONS, options.dat || {})
-    this.netOptions = _.extend(NET_OPTIONS, options.net || {})
+    this.datOptions = _.extend({}, DAT_OPTIONS, options.dat || {})
+    this.netOptions = _.extend({}, NET_OPTIONS, options.net || {})
     this.port = options.port || 80
   }
 
   init (done) {
     debug('Initializing...')
     this.app = express()
-    async.autoInject({
-      db: (done) => {
+    async.series([
+      (done) => {
         this.db.read((err, data) => {
           if (err) return done(err)
           if (Object.keys(data).length === 0) {
@@ -65,38 +65,46 @@ module.exports = class DatBoi {
           }
         })
       },
-      multidat: (db, done) => {
+      (done) => {
         debug('Loading multidat...')
         let multiDb = toiletdb(path.join(this.directory, 'multidat.json'))
         Multidat(multiDb, this.datOptions, (err, multidat) => {
           this.multidat = multidat
+          debug('✓ Loaded multidat')
           done(err, multidat)
         })
       },
-      peerSiteList: (multidat, done) => {
+      (done) => {
         this.peerSiteList(done)
       },
-      localSites: (multidat, done) => {
+      (done) => {
         debug('Loading local sites...')
         async.waterfall([
           this.db.read.bind(this.db, 'sites'),
           this.loadSites.bind(this)
         ], (err, sites) => {
+          if (err) return done(err)
           this.localSites = sites
-          done(err, sites)
+          debug('✓ Loaded local sites')
+          done(null, sites)
         })
       },
-      remoteSites: (multidat, done) => {
+      (done) => {
         debug('Loading remote sites...')
         async.waterfall([
           this.db.read.bind(this.db, 'sitelists'),
           this.loadSiteLists.bind(this)
         ], (err, sitelists) => {
           this.remoteSites = sitelists
+          debug('✓ Loaded remote sites')
           done(err, sitelists)
         })
       }
-    }, done)
+    ], (err) => {
+      if (err) return done(err)
+      debug('✓ Initialized')
+      done()
+    })
   }
 
   start (done) {
@@ -119,6 +127,7 @@ module.exports = class DatBoi {
       (done) => {
         this.server = http.createServer(this.app)
         this.server.listen(this.port, done)
+        debug('Now listening on port %i', this.port)
       }
     ], (err) => {
       if (err) return done(err)
@@ -156,7 +165,7 @@ module.exports = class DatBoi {
   startWatchers () {
     // restart when config changes
     this.watcher = fs.watch(this.configPath)
-    this.watcher.on('change', (type, name) => {
+    this.watcher.once('change', (type, name) => {
       debug('Restarting due to change in config...')
       this.restart()
     })
@@ -182,8 +191,8 @@ module.exports = class DatBoi {
   }
 
   peerSiteList (done) {
-    debug('Peering local sitelist...')
     if (this.peersites) {
+      debug('Peering local sitelist...')
       let joinDir = path.join.bind(path, this.directory)
       // start peering this.sites
       async.parallel([
@@ -207,7 +216,7 @@ module.exports = class DatBoi {
 
   loadSites (sites = {}, done) {
     let hostnames = Object.keys(sites)
-    if (!hostnames.length) return done()
+    if (!hostnames.length) return done(null, sites)
     let dats = this.multidat.list()
     async.each(hostnames, (hostname, done) => {
       debug(`Loading ${hostname}...`)
@@ -223,9 +232,9 @@ module.exports = class DatBoi {
         site.directory = site.directory || path.join(this.directory, hostname)
         let dat = dats.find(d => d.key.toString('hex') === site.key)
         if (dat) {
-          done()
+          done(null, dat)
         } else {
-          let options = _.extend(this.datOptions, { key: site.key })
+          let options = _.extend({}, this.datOptions, { key: site.key })
           this.multidat.create(site.directory, options, done)
         }
       } else if (site.directory) {
@@ -234,19 +243,22 @@ module.exports = class DatBoi {
           site.key = dat.key.toString('hex')
           site.url = `dat://${site.key}`
           dat.importFiles()
-          done()
+          done(null, dat)
         })
       }
     }, (err) => {
       if (err) return done(err)
+      debug(`Loaded sites: ${hostnames.join(', ')}`)
       done(null, sites)
     })
   }
 
-  loadSiteLists (sitelists, done) {
+  loadSiteLists (sitelists = [], done) {
+    debug(`Loading sitelists...`)
     let remoteSites = {}
     let dats = this.multidat.list()
     async.each(sitelists, (sitelist, done) => {
+      debug(`Loading sitelist ${sitelist}`)
       let key = DatBoi.getDatKey(sitelist)
 
       async.waterfall([
@@ -256,12 +268,12 @@ module.exports = class DatBoi {
             done(null, dat)
           } else {
             let datPath = path.join(this.directory, key)
-            let datOptions = _.extend(this.datOptions, { key, sparse: true })
+            let datOptions = _.extend({}, this.datOptions, { key, sparse: true })
             this.multidat.create(datPath, datOptions, done)
           }
         },
         (dat, done) => {
-          dat.joinNetwork()
+          dat.joinNetwork(this.netOptions)
           this.multidat.readManifest(dat, done)
         },
         (datjson, done) => {
@@ -273,6 +285,7 @@ module.exports = class DatBoi {
         done()
       })
     }, (err) => {
+      debug('✓ Loaded sitelists')
       done(err, remoteSites)
     })
   }
@@ -282,6 +295,7 @@ module.exports = class DatBoi {
   and hostfile entries associated with deleted sites.
    */
   cleanArchives (done) {
+    debug('Checking for unused archives...')
     let datKeys = this.multidat.list().map((dat) => {
       return dat.key.toString('hex')
     })
@@ -299,6 +313,7 @@ module.exports = class DatBoi {
     async.parallel([
       (done) => {
         async.each(keys, (key, done) => {
+          debug(`Removing archive ${key}...`)
           async.series([
             this.multidat.close.bind(this.multidat, key),
             rimraf.bind(rimraf, path.join(this.directory, key))
@@ -307,10 +322,15 @@ module.exports = class DatBoi {
       },
       (done) => {
         async.eachSeries(hostnames, (hostname, done) => {
+          debug(`Removing domain ${hostname}...`)
           hostile.remove(LOCALHOST, hostname, done)
         }, done)
       }
-    ], done)
+    ], (err) => {
+      if (err) return done(err)
+      debug('✓ Cleaned archives')
+      done()
+    })
   }
 
   get sites () {
