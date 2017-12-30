@@ -132,6 +132,7 @@ module.exports = class DatBoi {
     ], (err) => {
       if (err) return done(err)
       this.startWatchers()
+      debug('✓ Started')
       done()
     })
   }
@@ -248,7 +249,7 @@ module.exports = class DatBoi {
       }
     }, (err) => {
       if (err) return done(err)
-      debug(`Loaded sites: ${hostnames.join(', ')}`)
+      debug(`✓ Loaded sites: ${hostnames.join(', ')}`)
       done(null, sites)
     })
   }
