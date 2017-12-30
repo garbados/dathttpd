@@ -1,6 +1,10 @@
-# DatBoi [![stability][0]][1] [![js-standard-style][2]][3]
+# DatBoi
 
-[![build status][4]][5]
+[![stability](https://img.shields.io/badge/stability-experimental-orange.svg?style=flat-square)](https://nodejs.org/api/documentation.html#documentation_stability_index)
+[![npm version](https://img.shields.io/npm/v/@garbados/dat-boi.svg?style=flat-square)](https://www.npmjs.com/package/@garbados/dat-boi)
+[![build status](https://img.shields.io/travis/garbados/dat-boi/master.svg?style=flat-square)](https://travis-ci.org/garbados/dat-boi)
+[![test coverage](https://img.shields.io/coveralls/github/jekyll/jekyll/master.svg?style=flat-square)]()
+[![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/feross/standard)
 
 A local-only, offline-first web server for [Dat](https://datprotocol.com) archives.
 
@@ -114,10 +118,3 @@ DatBoi is a divergent fork of [DatHTTPD](https://github.com/beakerbrowser/dathtt
 ## License
 
 [MIT](./LICENSE)
-
-[0]: https://img.shields.io/badge/stability-experimental-orange.svg?style=flat-square
-[1]: https://nodejs.org/api/documentation.html#documentation_stability_index
-[2]: https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square
-[3]: https://github.com/feross/standard
-[4]: https://img.shields.io/travis/garbados/dat-boi/master.svg?style=flat-square
-[5]: https://travis-ci.org/garbados/dat-boi
