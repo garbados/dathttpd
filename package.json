@@ -1,40 +1,41 @@
 {
-  "name": "dathttpd",
-  "version": "3.2.0",
+  "name": "@garbados/dat-boi",
+  "version": "1.0.0-alpha",
   "description": "Host Dat sites over HTTPs and Dat with DNS hostnames and zero-config TLS (via LetsEncrypt).",
-  "main": "./lib/index.js",
-  "bin": "./bin/index.js",
+  "main": "./index.js",
+  "bin": "./cli.js",
   "scripts": {
-    "start": "node ./bin/index.js",
-    "test": "standard && dependency-check . --unused --no-dev"
+    "start": "node ./cli.js",
+    "test": "standard && dependency-check . --unused --no-dev && tap test.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pfrazee/dathttpd.git"
+    "url": "git+https://github.com/garbados/dathttpd.git"
   },
   "keywords": [
     "dat",
     "http",
     "https"
   ],
-  "author": "Paul Frazee <pfrazee@gmail.com>",
+  "authors": [
+    "Paul Frazee <pfrazee@gmail.com>",
+    "Diana Thayer <garbados@gmail.com>"
+  ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pfrazee/dathttpd/issues"
+    "url": "https://github.com/garbados/dathttpd/issues"
   },
-  "homepage": "https://github.com/pfrazee/dathttpd#readme",
+  "homepage": "https://github.com/garbados/dathttpd#readme",
   "dependencies": {
     "async": "^2.6.0",
+    "chalk": "^2.3.0",
+    "debug": "^3.1.0",
     "express": "^4.15.4",
-    "greenlock-express": "^2.0.9",
     "hostile": "^1.3.0",
-    "http-proxy": "^1.16.2",
-    "js-yaml": "^3.9.1",
+    "lodash": "^4.17.4",
+    "longjohn": "^0.2.12",
     "mkdirp": "^0.5.1",
-    "ms": "^2.0.0",
     "multidat": "^5.0.1",
-    "prom-client": "^7.0.1",
-    "response-time": "^2.3.2",
     "serve-index": "^1.8.0",
     "toiletdb": "^1.2.1",
     "untildify": "^3.0.2",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "dependency-check": "^2.9.1",
-    "standard": "^10.0.3"
+    "standard": "^10.0.3",
+    "tap": "^11.0.1"
   }
 }
