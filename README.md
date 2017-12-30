@@ -7,7 +7,7 @@ A local-only, offline-first web server for [Dat](https://datprotocol.com) archiv
 Here's a usage example:
 
 ```
-$ npm i -g dat-boi
+$ npm i -g @garbados/dat-boi
 $ dat-boi start &
 $ dat-boi add home.bovid dat://c33bc8d7c32a6e905905efdbf21efea9ff23b00d1c3ee9aea80092eaba6c4957/
 $ curl home.bovid
@@ -43,7 +43,7 @@ The goal is to allow people to share content and web applications at human-reada
 You can install DatBoi with [npm](https://www.npmjs.com/):
 
 ```
-npm i -g dat-boi
+npm i -g @garbados/dat-boi
 ```
 
 Now you can run `dat-boi`. Try running `dat-boi -h` for usage information.
