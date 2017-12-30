@@ -1,6 +1,6 @@
 {
   "name": "@garbados/dat-boi",
-  "version": "1.0.1-alpha",
+  "version": "1.0.2-alpha",
   "description": "Host Dat sites over HTTPs and Dat with DNS hostnames and zero-config TLS (via LetsEncrypt).",
   "main": "./index.js",
   "bin": "./cli.js",
