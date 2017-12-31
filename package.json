@@ -45,7 +45,6 @@
   },
   "devDependencies": {
     "dependency-check": "^2.9.1",
-    "mock-fs": "^4.4.2",
     "standard": "^10.0.3",
     "tap": "^11.0.1"
   }
