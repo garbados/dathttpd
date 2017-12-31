@@ -54,6 +54,15 @@ module.exports = class DatBoi {
     this.app = express()
     async.series([
       (done) => {
+        fs.stat(this.configPath, (err) => {
+          if (err && err.code === 'ENOENT') {
+            fs.writeFile(this.configPath, '{}', done)
+          } else {
+            done(err)
+          }
+        })
+      },
+      (done) => {
         this.db.read((err, data) => {
           if (err) return done(err)
           if (Object.keys(data).length === 0) {
