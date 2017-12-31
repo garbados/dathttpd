@@ -260,7 +260,6 @@ module.exports = class DatBoi {
               return done(null, dat)
             } else {
               let options = _.extend({}, this.datOptions, { key: site.key })
-              console.log(site.directory)
               return this.multidat.create(site.directory, options, done)
             }
           } else if (site.directory) {
