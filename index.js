@@ -128,16 +128,18 @@ module.exports = class DatBoi {
       this.init.bind(this),
       this.cleanArchives.bind(this),
       (done) => {
-        this.multidat.list().forEach((dat) => {
+        async.each(this.multidat.list(), (dat, done) => {
           debug(`Joining network for ${dat.key.toString('hex')}`)
-          dat.joinNetwork(this.netOptions)
+          dat.joinNetwork(this.netOptions, done)
+        }, (err) => {
+          if (err) return done(err)
+          this.sites.forEach((site) => {
+            debug(`Setting up vhost for ${site.hostname}`)
+            let app = DatBoi.createSiteApp(site)
+            this.app.use(vhost(site.hostname, app))
+          })
+          done()
         })
-        this.sites.forEach((site) => {
-          debug(`Setting up vhost for ${site.hostname}`)
-          let app = DatBoi.createSiteApp(site)
-          this.app.use(vhost(site.hostname, app))
-        })
-        done()
       },
       (done) => {
         this.server = http.createServer(this.app)
@@ -155,7 +157,7 @@ module.exports = class DatBoi {
   stop (done) {
     debug('Stopping...')
     this.watcher.close()
-    async.parallel([
+    async.series([
       (done) => {
         debug('Stopping dats...')
         async.each(this.multidat.list(), (dat, done) => {
