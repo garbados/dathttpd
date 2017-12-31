@@ -238,35 +238,42 @@ module.exports = class DatBoi {
       let site = sites[hostname]
       site.hostname = hostname
       DatBoi.validateSiteCfg(site)
-
-      if (site.url || site.directory) {
-        hostile.set(LOCALHOST, hostname)
-      }
-      if (site.url) {
-        site.key = site.key || DatBoi.getDatKey(site.url) // TODO use dat-link-resolve instead
-        site.directory = site.directory || path.join(this.directory, hostname)
-        let dat = dats.find(d => d.key.toString('hex') === site.key)
-        if (dat) {
-          return done(null, dat)
-        } else {
-          let options = _.extend({}, this.datOptions, { key: site.key })
-          return this.multidat.create(site.directory, options, done)
+      async.parallel([
+        (done) => {
+          if (site.url || site.directory) {
+            hostile.set(LOCALHOST, hostname, done)
+          } else {
+            return done()
+          }
+        },
+        (done) => {
+          if (site.url) {
+            site.key = site.key || DatBoi.getDatKey(site.url) // TODO use dat-link-resolve instead
+            site.directory = site.directory || path.join(this.directory, hostname)
+            let dat = dats.find(d => d.key.toString('hex') === site.key)
+            if (dat) {
+              return done(null, dat)
+            } else {
+              let options = _.extend({}, this.datOptions, { key: site.key })
+              return this.multidat.create(site.directory, options, done)
+            }
+          } else if (site.directory) {
+            this.multidat.create(site.directory, this.datOptions, (err, dat) => {
+              if (err) return done(err)
+              site.key = dat.key.toString('hex')
+              site.url = `dat://${site.key}`
+              dat.importFiles()
+              return done(null, dat)
+            })
+          } else {
+            return done()
+          }
         }
-      } else if (site.directory) {
-        this.multidat.create(site.directory, this.datOptions, (err, dat) => {
-          if (err) return done(err)
-          site.key = dat.key.toString('hex')
-          site.url = `dat://${site.key}`
-          dat.importFiles()
-          return done(null, dat)
-        })
-      } else {
-        return done()
-      }
+      ], done)
     }, (err) => {
       if (err) return done(err)
       debug(`✓ Loaded sites: ${hostnames.join(', ')}`)
-      done(null, sites)
+      return done(null, sites)
     })
   }
 
