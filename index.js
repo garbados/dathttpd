@@ -16,8 +16,7 @@ const serveDir = require('serve-index')
 const toiletdb = require('toiletdb')
 const untildify = require('untildify')
 const vhost = require('vhost')
-const pkg = require('./package.json')
-const debug = require('debug')(pkg.name)
+const debug = require('debug')('dat-boi')
 const { EventEmitter } = require('events')
 
 if (process.env.DEBUG) {
