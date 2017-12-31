@@ -29,9 +29,6 @@ tap.test({
   bail: true
 }, (t) => {
   let boi = DatBoi.create(OPTIONS)
-  boi.on('ready', () => {
-    console.log(boi.listeners())
-  })
 
   async.series([
     (done) => {
@@ -55,17 +52,20 @@ tap.test({
       boi.addSite(SITE.hostname, SITE.url, done)
     },
     (done) => {
-      // test add results
-      t.equal(boi.sites.length, 1)
-      boi.removeSite(SITE.hostname, done)
+      boi.once('ready', () => {
+        t.equal(boi.sites.length, 1)
+        boi.removeSite(SITE.hostname, done)
+      })
     },
     (done) => {
       // test removal results
-      t.equal(boi.sites.length, 0)
-      boi.stop(done)
+      boi.once('ready', () => {
+        t.equal(boi.sites.length, 0)
+        boi.stop(done)
+      })
     }
   ], (err) => {
-    t.error(err)
+    t.equal(err, null)
     t.end()
   })
 })

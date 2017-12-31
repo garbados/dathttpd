@@ -34,7 +34,7 @@ const DATIGNORE = ['*', '**/*', '!dat.json'].join('\n')
 const LOCALHOST = '127.0.0.1'
 const PORT = 80
 
-const DAT_OPTIONS = {}
+const DAT_OPTIONS = { live: true }
 const NET_OPTIONS = {}
 
 // monkey-patch Object for older node versions
@@ -54,7 +54,7 @@ module.exports = class DatBoi extends EventEmitter {
     this.datOptions = _.extend({}, DAT_OPTIONS, options.dat || {})
     this.netOptions = _.extend({}, NET_OPTIONS, options.net || {})
     this.port = options.port || DatBoi.port
-    this.modifyHostfile = options.modifyHostfile || true
+    this.modifyHostfile = options.modifyHostfile
   }
 
   init (done) {
@@ -177,7 +177,11 @@ module.exports = class DatBoi extends EventEmitter {
           done()
         }
       }
-    ], done)
+    ], (err) => {
+      if (err) return done(err)
+      debug('✓ Stopped')
+      return done()
+    })
   }
 
   restart (done) {
@@ -256,14 +260,18 @@ module.exports = class DatBoi extends EventEmitter {
       async.parallel([
         (done) => {
           if (site.url || site.directory) {
-            if (this.modifyHostfile) {
+            if (this.modifyHostfile !== false) {
+              debug('Updating hostfile for %s', site.hostname)
               hostile.set(LOCALHOST, hostname, done)
+            } else {
+              return done()
             }
           } else {
             return done()
           }
         },
         (done) => {
+          debug('Loading archive for %s from %s', site.hostname, site.url)
           if (site.url) {
             site.key = site.key || DatBoi.getDatKey(site.url) // TODO use dat-link-resolve instead
             site.directory = site.directory || path.join(this.directory, hostname)
@@ -367,7 +375,7 @@ module.exports = class DatBoi extends EventEmitter {
         }, done)
       },
       (done) => {
-        if (this.modifyHostfile) {
+        if (this.modifyHostfile !== false) {
           async.eachSeries(hostnames, (hostname, done) => {
             debug(`Removing domain ${hostname}...`)
             hostile.remove(LOCALHOST, hostname, done)
@@ -408,10 +416,7 @@ module.exports = class DatBoi extends EventEmitter {
         sites[domain] = _.extend(sites[domain] || {}, site)
         this.db.write('sites', sites, done)
       }
-    ], (err) => {
-      if (err) return done(err)
-      this.once('ready', done)
-    })
+    ], done)
   }
 
   removeSite (domain, done) {
@@ -421,11 +426,7 @@ module.exports = class DatBoi extends EventEmitter {
         delete sites[domain]
         this.db.write('sites', sites, done)
       }
-    ], (err) => {
-      console.log(err)
-      if (err) return done(err)
-      this.once('ready', done)
-    })
+    ], done)
   }
 
   addSiteList (key, done) {
@@ -440,10 +441,7 @@ module.exports = class DatBoi extends EventEmitter {
           this.db.write('sitelists', sitelists, done)
         }
       }
-    ], (err) => {
-      if (err) return done(err)
-      this.once('ready', done)
-    })
+    ], done)
   }
 
   removeSiteList (key, done) {
@@ -458,10 +456,7 @@ module.exports = class DatBoi extends EventEmitter {
           done()
         }
       }
-    ], (err) => {
-      if (err) return done(err)
-      this.once('ready', done)
-    })
+    ], done)
   }
 
   static createSiteApp (site = {}) {
@@ -479,15 +474,15 @@ module.exports = class DatBoi extends EventEmitter {
 
   static validateSiteCfg (site) {
     if (!HOSTNAME_REGEX.test(site.hostname)) {
-      console.log('Invalid hostname "%s".', site.hostname)
+      debug('Invalid hostname "%s".', site.hostname)
       throw new Error('Invalid config')
     }
     if (site.url && !DAT_REGEX.test(site.url)) {
-      console.error('Invalid Dat URL "%s". URLs must have the `dat://` scheme and the "raw" 64-character hex hostname.', site.url)
+      debug('Invalid Dat URL "%s". URLs must have the `dat://` scheme and the "raw" 64-character hex hostname.', site.url)
       throw new Error('Invalid config')
     }
     if (!site.url && !site.proxy) {
-      console.log('Invalid config for "%s", must have a url or proxy configured.', site.hostname)
+      debug('Invalid config for "%s", must have a url or proxy configured.', site.hostname)
       throw new Error('Invalid config')
     }
   }
