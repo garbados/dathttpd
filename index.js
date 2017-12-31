@@ -159,8 +159,12 @@ module.exports = class DatBoi {
         }, done)
       },
       (done) => {
-        debug('Stopping server...')
-        this.server.close(done)
+        if (this.server.listening) {
+          debug('Stopping server...')
+          this.server.close(done)
+        } else {
+          done()
+        }
       }
     ], done)
   }
@@ -243,10 +247,10 @@ module.exports = class DatBoi {
         site.directory = site.directory || path.join(this.directory, hostname)
         let dat = dats.find(d => d.key.toString('hex') === site.key)
         if (dat) {
-          done(null, dat)
+          return done(null, dat)
         } else {
           let options = _.extend({}, this.datOptions, { key: site.key })
-          this.multidat.create(site.directory, options, done)
+          return this.multidat.create(site.directory, options, done)
         }
       } else if (site.directory) {
         this.multidat.create(site.directory, this.datOptions, (err, dat) => {
@@ -254,8 +258,10 @@ module.exports = class DatBoi {
           site.key = dat.key.toString('hex')
           site.url = `dat://${site.key}`
           dat.importFiles()
-          done(null, dat)
+          return done(null, dat)
         })
+      } else {
+        return done()
       }
     }, (err) => {
       if (err) return done(err)

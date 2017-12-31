@@ -12,6 +12,8 @@ const OPTIONS = {
   directory: '.test-boi'
 }
 
+const SITE = 'dat://c33bc8d7c32a6e905905efdbf21efea9ff23b00d1c3ee9aea80092eaba6c4957'
+
 tap.afterEach((done) => {
   async.parallel([
     fs.unlink.bind(fs, OPTIONS.config),
@@ -42,8 +44,16 @@ tap.test({
       boi.start(done)
     },
     (done) => {
-      // TODO test results of start
+      // test results of start
       t.ok(boi.server)
+      boi.addSite('test.site', SITE, done)
+    },
+    (done) => {
+      // TODO test add results
+      boi.removeSite('test.site', done)
+    },
+    (done) => {
+      // TODO test removal results
       boi.stop(done)
     }
   ], (err) => {
