@@ -38,7 +38,7 @@
     "multidat": "^5.0.1",
     "rimraf": "^2.6.2",
     "serve-index": "^1.8.0",
-    "toiletdb": "^1.2.1",
+    "toiletdb": "git+https://github.com/garbados/toiletdb.git",
     "untildify": "^3.0.2",
     "vhost": "^3.0.2",
     "yargs": "^10.0.3"
