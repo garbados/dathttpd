@@ -18,6 +18,7 @@ const untildify = require('untildify')
 const vhost = require('vhost')
 const pkg = require('./package.json')
 const debug = require('debug')(pkg.name)
+const { EventEmitter } = require('events')
 
 if (process.env.DEBUG) {
   require('longjohn')
@@ -41,8 +42,9 @@ Object.values = Object.values || function (obj) {
   return Object.keys(obj).map((key) => { return obj[key] })
 }
 
-module.exports = class DatBoi {
+module.exports = class DatBoi extends EventEmitter {
   constructor (options = { config: CFG_PATH, directory: DIR_PATH }) {
+    super()
     debug('Creating new DatBoi with config: %j', options)
     this.configPath = untildify(options.config || CFG_PATH)
     this.directory = untildify(options.directory || DIR_PATH)
@@ -52,6 +54,7 @@ module.exports = class DatBoi {
     this.datOptions = _.extend({}, DAT_OPTIONS, options.dat || {})
     this.netOptions = _.extend({}, NET_OPTIONS, options.net || {})
     this.port = options.port || DatBoi.port
+    this.modifyHostfile = options.modifyHostfile || true
   }
 
   init (done) {
@@ -150,6 +153,7 @@ module.exports = class DatBoi {
       if (err) return done(err)
       this.startWatchers()
       debug('✓ Started')
+      this.emit('ready')
       done()
     })
   }
@@ -189,6 +193,8 @@ module.exports = class DatBoi {
     this.watcher = fs.watch(this.configPath)
     this.watcher.once('change', (type, name) => {
       debug('Restarting due to change in config...')
+      this.emit('change')
+      this.emit('change-config')
       this.restart()
     })
     // restart when sitelists change
@@ -207,6 +213,8 @@ module.exports = class DatBoi {
       async.race(tasks, (err) => {
         if (err) throw err
         debug('Restarting due to change in a remote sitelist...')
+        this.emit('change')
+        this.emit('change-sitelist')
         this.restart()
       })
     }
@@ -248,7 +256,9 @@ module.exports = class DatBoi {
       async.parallel([
         (done) => {
           if (site.url || site.directory) {
-            hostile.set(LOCALHOST, hostname, done)
+            if (this.modifyHostfile) {
+              hostile.set(LOCALHOST, hostname, done)
+            }
           } else {
             return done()
           }
@@ -357,10 +367,14 @@ module.exports = class DatBoi {
         }, done)
       },
       (done) => {
-        async.eachSeries(hostnames, (hostname, done) => {
-          debug(`Removing domain ${hostname}...`)
-          hostile.remove(LOCALHOST, hostname, done)
-        }, done)
+        if (this.modifyHostfile) {
+          async.eachSeries(hostnames, (hostname, done) => {
+            debug(`Removing domain ${hostname}...`)
+            hostile.remove(LOCALHOST, hostname, done)
+          }, done)
+        } else {
+          done()
+        }
       }
     ], (err) => {
       if (err) return done(err)
@@ -394,7 +408,10 @@ module.exports = class DatBoi {
         sites[domain] = _.extend(sites[domain] || {}, site)
         this.db.write('sites', sites, done)
       }
-    ], done)
+    ], (err) => {
+      if (err) return done(err)
+      this.once('ready', done)
+    })
   }
 
   removeSite (domain, done) {
@@ -404,7 +421,11 @@ module.exports = class DatBoi {
         delete sites[domain]
         this.db.write('sites', sites, done)
       }
-    ], done)
+    ], (err) => {
+      console.log(err)
+      if (err) return done(err)
+      this.once('ready', done)
+    })
   }
 
   addSiteList (key, done) {
@@ -419,7 +440,10 @@ module.exports = class DatBoi {
           this.db.write('sitelists', sitelists, done)
         }
       }
-    ], done)
+    ], (err) => {
+      if (err) return done(err)
+      this.once('ready', done)
+    })
   }
 
   removeSiteList (key, done) {
@@ -434,7 +458,10 @@ module.exports = class DatBoi {
           done()
         }
       }
-    ], done)
+    ], (err) => {
+      if (err) return done(err)
+      this.once('ready', done)
+    })
   }
 
   static createSiteApp (site = {}) {

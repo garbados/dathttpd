@@ -9,10 +9,14 @@ const tap = require('tap')
 const OPTIONS = {
   port: 10001,
   config: '.test-boi.json',
-  directory: '.test-boi'
+  directory: '.test-boi',
+  modifyHostfile: false
 }
 
-const SITE = 'dat://c33bc8d7c32a6e905905efdbf21efea9ff23b00d1c3ee9aea80092eaba6c4957'
+const SITE = {
+  url: 'dat://c33bc8d7c32a6e905905efdbf21efea9ff23b00d1c3ee9aea80092eaba6c4957',
+  hostname: 'test.site'
+}
 
 tap.afterEach((done) => {
   async.parallel([
@@ -25,6 +29,9 @@ tap.test({
   bail: true
 }, (t) => {
   let boi = DatBoi.create(OPTIONS)
+  boi.on('ready', () => {
+    console.log(boi.listeners())
+  })
 
   async.series([
     (done) => {
@@ -33,27 +40,28 @@ tap.test({
       t.ok(boi.directory)
       t.equal(boi.port, OPTIONS.port)
       t.equal(boi.multidat, undefined)
-      boi.init(done)
-    },
-    (done) => {
-      // test results of init
-      t.ok(boi.multidat)
-      t.equal(boi.sites.length, 0)
       t.equal(boi.server, undefined)
       t.equal(boi.watcher, undefined)
       boi.start(done)
     },
     (done) => {
+      // test results of init
+      t.ok(boi.multidat)
+      t.ok(boi.server)
+      t.ok(boi.watcher)
+      t.equal(boi.sites.length, 0)
       // test results of start
       t.ok(boi.server)
-      boi.addSite('test.site', SITE, done)
+      boi.addSite(SITE.hostname, SITE.url, done)
     },
     (done) => {
-      // TODO test add results
-      boi.removeSite('test.site', done)
+      // test add results
+      t.equal(boi.sites.length, 1)
+      boi.removeSite(SITE.hostname, done)
     },
     (done) => {
-      // TODO test removal results
+      // test removal results
+      t.equal(boi.sites.length, 0)
       boi.stop(done)
     }
   ], (err) => {
