@@ -36,6 +36,11 @@ const PORT = 80
 const DAT_OPTIONS = {}
 const NET_OPTIONS = {}
 
+// monkey-patch Object for older node versions
+Object.values = Object.values || function (obj) {
+  return Object.keys(obj).map((key) => { return obj[key] })
+}
+
 module.exports = class DatBoi {
   constructor (options = { config: CFG_PATH, directory: DIR_PATH }) {
     debug('Creating new DatBoi with config: %j', options)
