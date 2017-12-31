@@ -37,6 +37,10 @@ const DAT_OPTIONS = {}
 const NET_OPTIONS = {}
 
 module.exports = class DatBoi {
+  /**
+   * @class DatBoi
+   * @param  {Object} options [description]
+   */
   constructor (options = { config: CFG_PATH, directory: DIR_PATH }) {
     debug('Creating new DatBoi with config: %j', options)
     this.configPath = untildify(options.config || CFG_PATH)
