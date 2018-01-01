@@ -17,6 +17,7 @@ const toiletdb = require('toiletdb')
 const untildify = require('untildify')
 const vhost = require('vhost')
 const debug = require('debug')('dat-boi')
+const { EventEmitter } = require('events')
 
 if (process.env.DEBUG) {
   require('longjohn')
@@ -32,11 +33,17 @@ const DATIGNORE = ['*', '**/*', '!dat.json'].join('\n')
 const LOCALHOST = '127.0.0.1'
 const PORT = 80
 
-const DAT_OPTIONS = {}
+const DAT_OPTIONS = { live: true }
 const NET_OPTIONS = {}
 
-module.exports = class DatBoi {
+// monkey-patch Object for older node versions
+Object.values = Object.values || function (obj) {
+  return Object.keys(obj).map((key) => { return obj[key] })
+}
+
+module.exports = class DatBoi extends EventEmitter {
   constructor (options = { config: CFG_PATH, directory: DIR_PATH }) {
+    super()
     debug('Creating new DatBoi with config: %j', options)
     this.configPath = untildify(options.config || CFG_PATH)
     this.directory = untildify(options.directory || DIR_PATH)
@@ -46,12 +53,22 @@ module.exports = class DatBoi {
     this.datOptions = _.extend({}, DAT_OPTIONS, options.dat || {})
     this.netOptions = _.extend({}, NET_OPTIONS, options.net || {})
     this.port = options.port || DatBoi.port
+    this.modifyHostfile = options.modifyHostfile
   }
 
   init (done) {
     debug('Initializing...')
     this.app = express()
     async.series([
+      (done) => {
+        fs.stat(this.configPath, (err) => {
+          if (err && err.code === 'ENOENT') {
+            fs.writeFile(this.configPath, '{}', done)
+          } else {
+            done(err)
+          }
+        })
+      },
       (done) => {
         this.db.read((err, data) => {
           if (err) return done(err)
@@ -113,16 +130,18 @@ module.exports = class DatBoi {
       this.init.bind(this),
       this.cleanArchives.bind(this),
       (done) => {
-        this.multidat.list().forEach((dat) => {
+        async.each(this.multidat.list(), (dat, done) => {
           debug(`Joining network for ${dat.key.toString('hex')}`)
-          dat.joinNetwork(this.netOptions)
+          dat.joinNetwork(this.netOptions, done)
+        }, (err) => {
+          if (err) return done(err)
+          this.sites.forEach((site) => {
+            debug(`Setting up vhost for ${site.hostname}`)
+            let app = DatBoi.createSiteApp(site)
+            this.app.use(vhost(site.hostname, app))
+          })
+          done()
         })
-        this.sites.forEach((site) => {
-          debug(`Setting up vhost for ${site.hostname}`)
-          let app = DatBoi.createSiteApp(site)
-          this.app.use(vhost(site.hostname, app))
-        })
-        done()
       },
       (done) => {
         this.server = http.createServer(this.app)
@@ -133,6 +152,7 @@ module.exports = class DatBoi {
       if (err) return done(err)
       this.startWatchers()
       debug('✓ Started')
+      this.emit('ready')
       done()
     })
   }
@@ -140,7 +160,7 @@ module.exports = class DatBoi {
   stop (done) {
     debug('Stopping...')
     this.watcher.close()
-    async.parallel([
+    async.series([
       (done) => {
         debug('Stopping dats...')
         async.each(this.multidat.list(), (dat, done) => {
@@ -149,10 +169,18 @@ module.exports = class DatBoi {
         }, done)
       },
       (done) => {
-        debug('Stopping server...')
-        this.server.close(done)
+        if (this.server.listening) {
+          debug('Stopping server...')
+          this.server.close(done)
+        } else {
+          done()
+        }
       }
-    ], done)
+    ], (err) => {
+      if (err) return done(err)
+      debug('✓ Stopped')
+      return done()
+    })
   }
 
   restart (done) {
@@ -168,6 +196,8 @@ module.exports = class DatBoi {
     this.watcher = fs.watch(this.configPath)
     this.watcher.once('change', (type, name) => {
       debug('Restarting due to change in config...')
+      this.emit('change')
+      this.emit('change-config')
       this.restart()
     })
     // restart when sitelists change
@@ -186,6 +216,8 @@ module.exports = class DatBoi {
       async.race(tasks, (err) => {
         if (err) throw err
         debug('Restarting due to change in a remote sitelist...')
+        this.emit('change')
+        this.emit('change-sitelist')
         this.restart()
       })
     }
@@ -224,33 +256,48 @@ module.exports = class DatBoi {
       let site = sites[hostname]
       site.hostname = hostname
       DatBoi.validateSiteCfg(site)
-
-      if (site.url || site.directory) {
-        hostile.set(LOCALHOST, hostname)
-      }
-      if (site.url) {
-        site.key = site.key || DatBoi.getDatKey(site.url) // TODO use dat-link-resolve instead
-        site.directory = site.directory || path.join(this.directory, hostname)
-        let dat = dats.find(d => d.key.toString('hex') === site.key)
-        if (dat) {
-          done(null, dat)
-        } else {
-          let options = _.extend({}, this.datOptions, { key: site.key })
-          this.multidat.create(site.directory, options, done)
+      async.parallel([
+        (done) => {
+          if (site.url || site.directory) {
+            if (this.modifyHostfile !== false) {
+              debug('Updating hostfile for %s', site.hostname)
+              hostile.set(LOCALHOST, hostname, done)
+            } else {
+              return done()
+            }
+          } else {
+            return done()
+          }
+        },
+        (done) => {
+          debug('Loading archive for %s from %s', site.hostname, site.url)
+          if (site.url) {
+            site.key = site.key || DatBoi.getDatKey(site.url) // TODO use dat-link-resolve instead
+            site.directory = site.directory || path.join(this.directory, hostname)
+            let dat = dats.find(d => d.key.toString('hex') === site.key)
+            if (dat) {
+              return done(null, dat)
+            } else {
+              let options = _.extend({}, this.datOptions, { key: site.key })
+              return this.multidat.create(site.directory, options, done)
+            }
+          } else if (site.directory) {
+            this.multidat.create(site.directory, this.datOptions, (err, dat) => {
+              if (err) return done(err)
+              site.key = dat.key.toString('hex')
+              site.url = `dat://${site.key}`
+              dat.importFiles()
+              return done(null, dat)
+            })
+          } else {
+            return done()
+          }
         }
-      } else if (site.directory) {
-        this.multidat.create(site.directory, this.datOptions, (err, dat) => {
-          if (err) return done(err)
-          site.key = dat.key.toString('hex')
-          site.url = `dat://${site.key}`
-          dat.importFiles()
-          done(null, dat)
-        })
-      }
+      ], done)
     }, (err) => {
       if (err) return done(err)
       debug(`✓ Loaded sites: ${hostnames.join(', ')}`)
-      done(null, sites)
+      return done(null, sites)
     })
   }
 
@@ -327,10 +374,14 @@ module.exports = class DatBoi {
         }, done)
       },
       (done) => {
-        async.eachSeries(hostnames, (hostname, done) => {
-          debug(`Removing domain ${hostname}...`)
-          hostile.remove(LOCALHOST, hostname, done)
-        }, done)
+        if (this.modifyHostfile !== false) {
+          async.eachSeries(hostnames, (hostname, done) => {
+            debug(`Removing domain ${hostname}...`)
+            hostile.remove(LOCALHOST, hostname, done)
+          }, done)
+        } else {
+          done()
+        }
       }
     ], (err) => {
       if (err) return done(err)
@@ -422,15 +473,15 @@ module.exports = class DatBoi {
 
   static validateSiteCfg (site) {
     if (!HOSTNAME_REGEX.test(site.hostname)) {
-      console.log('Invalid hostname "%s".', site.hostname)
+      debug('Invalid hostname "%s".', site.hostname)
       throw new Error('Invalid config')
     }
     if (site.url && !DAT_REGEX.test(site.url)) {
-      console.error('Invalid Dat URL "%s". URLs must have the `dat://` scheme and the "raw" 64-character hex hostname.', site.url)
+      debug('Invalid Dat URL "%s". URLs must have the `dat://` scheme and the "raw" 64-character hex hostname.', site.url)
       throw new Error('Invalid config')
     }
     if (!site.url && !site.proxy) {
-      console.log('Invalid config for "%s", must have a url or proxy configured.', site.hostname)
+      debug('Invalid config for "%s", must have a url or proxy configured.', site.hostname)
       throw new Error('Invalid config')
     }
   }
