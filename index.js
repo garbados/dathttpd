@@ -473,15 +473,15 @@ module.exports = class DatBoi extends EventEmitter {
 
   static validateSiteCfg (site) {
     if (!HOSTNAME_REGEX.test(site.hostname)) {
-      debug('Invalid hostname "%s".', site.hostname)
+      console.log('Invalid hostname "%s".', site.hostname)
       throw new Error('Invalid config')
     }
     if (site.url && !DAT_REGEX.test(site.url)) {
-      debug('Invalid Dat URL "%s". URLs must have the `dat://` scheme and the "raw" 64-character hex hostname.', site.url)
+      console.log('Invalid Dat URL "%s". URLs must have the `dat://` scheme and the "raw" 64-character hex hostname.', site.url)
       throw new Error('Invalid config')
     }
-    if (!site.url && !site.proxy) {
-      debug('Invalid config for "%s", must have a url or proxy configured.', site.hostname)
+    if (!site.url) {
+      console.log('Invalid config for "%s", must have a url configured.', site.hostname)
       throw new Error('Invalid config')
     }
   }
