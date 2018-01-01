@@ -10,7 +10,11 @@ const OPTIONS = {
   port: 10001,
   config: '.test-boi.json',
   directory: '.test-boi',
-  modifyHostfile: false
+  modifyHostfile: false,
+  net: {
+    upload: false,
+    download: false
+  }
 }
 
 const SITE = {
