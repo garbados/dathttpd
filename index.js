@@ -59,7 +59,6 @@ module.exports = class DatBoi extends EventEmitter {
     this.port = options.port || DatBoi.port
     this.modifyHostfile = options.modifyHostfile
     this.serve = options.serve
-    console.log(this.modifyHostfile)
   }
 
   init (done) {
