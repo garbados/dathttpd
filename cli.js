@@ -23,7 +23,7 @@ require('yargs')
   .command({
     command: '$0',
     aliases: ['start'],
-    desc: 'Start the web server.',
+    desc: 'Start DatBoi.',
     builder: (yargs) => {
       yargs.options({
         port: {
@@ -44,35 +44,35 @@ require('yargs')
         'no-download': {
           alias: 'D',
           desc: 'If set, DatBoi will not download updates for sites and sitelists.'
+        },
+        'no-hostfile': {
+          alias: 'H',
+          desc: 'If set, DatBoi will not attempt to modify the user\'s hostfile.'
+        },
+        'no-serve': {
+          alias: 'S',
+          desc: 'Do not activate the web server and instead only peer known archives. Use this to turn DatBoi into a dedicated Dat peer.'
         }
       })
     },
     handler: (argv) => {
-      let options = {
-        config: argv.config,
-        directory: argv.directory,
-        port: argv.port,
-        peerSites: argv.peer,
-        net: {}
-      }
-      if (argv['no-upload']) options.net.upload = false
-      if (argv['no-download']) options.net.download = false
-      let boi = new DatBoi(options)
+      let boi = new DatBoi(getOptions(argv))
       boi.start(function (err) {
         if (err) {
           console.log(chalk.red(err))
         } else {
-          if (options.peerSites) {
+          if (boi.peerSites) {
             let dat = boi.multidat.list().filter((dat) => {
               return dat.path === boi.directory
             })[0]
             console.log('Peering known sites at dat://%s', dat.key.toString('hex'))
           }
-          if (boi.sites.length) {
-            console.log('Now serving on port %i:', boi.port)
+          if (!boi.serve) {
+            console.log('Now peering known sites.')
             printSites(boi)
           } else {
-            console.log('Now listening on port %i', boi.port)
+            console.log('Now sharing known sites on port %i.', boi.port)
+            printSites(boi)
           }
         }
       })
@@ -83,7 +83,7 @@ require('yargs')
     aliases: ['ls'],
     desc: 'List known sites.',
     handler: (argv) => {
-      let boi = new DatBoi(argv)
+      let boi = new DatBoi(getOptions(argv))
       boi.init((err) => {
         if (err) return console.log(chalk.red(err))
         if (boi.sites.length) {
@@ -99,7 +99,7 @@ require('yargs')
     aliases: ['a'],
     desc: 'Add a new site.',
     handler: (argv) => {
-      let boi = new DatBoi(argv)
+      let boi = new DatBoi(getOptions(argv))
       boi.addSite(argv.domain, argv.key, (err) => {
         if (err) return console.log(chalk.red(err))
         console.log(`Added new site ${argv.domain} from ${argv.key}`)
@@ -111,7 +111,7 @@ require('yargs')
     aliases: ['rm'],
     desc: 'Remove a site by domain.',
     handler: (argv) => {
-      let boi = new DatBoi(argv)
+      let boi = new DatBoi(getOptions(argv))
       boi.removeSite(argv.domain, (err) => {
         if (err) return console.log(chalk.red(err))
         console.log(`Removed site ${argv.domain}`)
@@ -123,7 +123,7 @@ require('yargs')
     aliases: ['al'],
     desc: 'Add a new sitelist',
     handler: (argv) => {
-      let boi = new DatBoi(argv)
+      let boi = new DatBoi(getOptions(argv))
       boi.addSiteList(argv.key, (err) => {
         if (err) return console.log(chalk.red(err))
         console.log(`Added sitelist ${argv.key}`)
@@ -135,7 +135,7 @@ require('yargs')
     aliases: ['rml'],
     desc: 'Remove a sitelist by key.',
     handler: (argv) => {
-      let boi = new DatBoi(argv)
+      let boi = new DatBoi(getOptions(argv))
       boi.removeSiteList(argv.key, (err) => {
         if (err) return console.log(chalk.red(err))
         console.log(`Removed sitelist ${argv.key}`)
@@ -145,6 +145,24 @@ require('yargs')
   .alias('help', 'h')
   .recommendCommands()
   .parse()
+
+function getOptions (argv) {
+  return {
+    config: argv.config,
+    directory: argv.directory,
+    port: argv.port,
+    peerSites: argv.peer,
+    net: {
+      upload: !argv['no-upload'],
+      download: !argv['no-download']
+    },
+    dat: {
+      live: true
+    },
+    modifyHostfile: !argv['no-hostfile'],
+    serve: !!argv['no-server']
+  }
+}
 
 function printSites (boi) {
   boi.sites.forEach((site) => {
