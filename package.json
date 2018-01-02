@@ -6,8 +6,7 @@
   "bin": "./cli.js",
   "scripts": {
     "start": "node ./cli.js",
-    "test": "standard && dependency-check . --unused --no-dev && tap test.js",
-    "docs": "npx documentation readme index.js --section='Library Usage'"
+    "test": "standard && dependency-check . --unused --no-dev && tap test.js"
   },
   "repository": {
     "type": "git",
@@ -46,7 +45,6 @@
   },
   "devDependencies": {
     "dependency-check": "^2.9.1",
-    "documentation": "^5.3.5",
     "standard": "^10.0.3",
     "tap": "^11.0.1"
   }
