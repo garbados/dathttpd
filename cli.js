@@ -49,7 +49,7 @@ require('yargs')
           alias: 'H',
           desc: 'If set, DatBoi will not attempt to modify the user\'s hostfile.'
         },
-        'no-serve': {
+        'no-server': {
           alias: 'S',
           desc: 'Do not activate the web server and instead only peer known archives. Use this to turn DatBoi into a dedicated Dat peer.'
         }
@@ -160,7 +160,7 @@ function getOptions (argv) {
       live: true
     },
     modifyHostfile: !argv['no-hostfile'],
-    serve: !!argv['no-server']
+    serve: !argv['no-server']
   }
 }
 
