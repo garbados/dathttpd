@@ -7,7 +7,7 @@
 [![greenkeeper](https://badges.greenkeeper.io/garbados/dat-boi.svg)](https://greenkeeper.io/)
 [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/feross/standard)
 
-A web server for [Dat](https://datprotocol.com) archives. DatBoi maps archive URLs to domain names and serves them on your local machine, facilitating a p2p web behind human-readable addresses without the use of centralized servers or external DNS resolution. Access, create, and share an intentional web!
+A web server that maps P2P [Dat](https://datprotocol.com) archives with arbitrary domain addresses and rehosts them locally. DatBoi maps archive URLs to domain names and serves them on your local machine, facilitating a p2p web behind human-readable addresses without the use of centralized servers or external DNS resolution. Access, create, and share an intentional web!
 
 Here's a usage example:
 
