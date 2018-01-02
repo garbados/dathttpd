@@ -100,6 +100,8 @@ Run `dat-boi -h` for help, or `dat-boi [command] -h` for help with a specific co
     - `-P, --peer`: If set, DatBoi will peer the user's `sites` config as an archive that others can use as a sitelist.
     - `-U, --no-upload`: If set, DatBoi will not upload data to peers. It will only perform downloads.
     - `-D, --no-download`: If set, DatBoi will not download updates for sites and sitelists, and so will be unable to process the addition of sites and sitelists.
+    - `-H, --no-hostfile`: If set, Datboi will not attempt to modify the user's hostfile.
+    - `-S, -no-server`: If set, Datboi will not activate the web server and instead only peer known archives. Use this to turn DatBoi into a dedicated Dat peer.
 - `list`: Lists all sites DatBoi knows about whether via the local sitelist or remote ones.
 - `add <domain> <url>`: Add a site that resolves the given domain to the Dat archive behind the given URL.
 - `remove <domain>`: Remove a site and its hostfile entry. If no other site references its archive, it will be removed too.

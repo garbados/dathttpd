@@ -58,6 +58,7 @@ module.exports = class DatBoi extends EventEmitter {
     this.netOptions = _.extend({}, NET_OPTIONS, options.net || {})
     this.port = options.port || DatBoi.port
     this.modifyHostfile = options.modifyHostfile
+    this.serve = options.serve
   }
 
   init (done) {
@@ -148,6 +149,7 @@ module.exports = class DatBoi extends EventEmitter {
         })
       },
       (done) => {
+        if (this.serve === false) return done()
         this.server = http.createServer(this.app)
         this.server.listen(this.port, done)
         debug('Now listening on port %i', this.port)
@@ -228,27 +230,28 @@ module.exports = class DatBoi extends EventEmitter {
   }
 
   peerSiteList (done) {
-    if (this.peerSites) {
-      debug('Peering local sitelist...')
-      let joinDir = path.join.bind(path, this.directory)
-      // start peering this.sites
-      async.parallel([
-        fs.writeFile.bind(fs, joinDir('.datignore'), DATIGNORE, 'utf8'),
-        fs.writeFile.bind(fs, joinDir('dat.json'), JSON.stringify({ sites: this.sites }))
-      ], (err) => {
-        if (err) return done(err)
-        this.multidat.create(this.directory, this.datOptions, (err, dat) => {
-          if (err) return done(err)
+    if (this.peerSites) return done()
+    debug('Peering local sitelist...')
+    let joinDir = path.join.bind(path, this.directory)
+    // start peering this.sites
+    async.parallel([
+      fs.writeFile.bind(fs, joinDir('.datignore'), DATIGNORE, 'utf8'),
+      fs.writeFile.bind(fs, joinDir('dat.json'), JSON.stringify({ sites: this.sites }))
+    ], (err) => {
+      if (err) return done(err)
+      async.waterfall([
+        (done) => {
+          this.multidat.create(this.directory, this.datOptions, done)
+        },
+        (dat, done) => {
           dat.importFiles((err) => {
             if (err) return done(err)
             debug(`Peering local sitelist at dat://${dat.key.toString('hex')}`)
             done()
           })
-        })
-      })
-    } else {
-      done()
-    }
+        }
+      ], done)
+    })
   }
 
   loadSites (sites = {}, done) {
@@ -394,18 +397,6 @@ module.exports = class DatBoi extends EventEmitter {
     })
   }
 
-  get sites () {
-    let localSites = Object.values(this.localSites)
-    let remoteSites = Object.values(this.remoteSites).map((sites) => {
-      return Object.values(sites)
-    }).reduce((a, b) => { return a.concat(b) }, [])
-    return localSites.concat(remoteSites)
-  }
-
-  get siteLists () {
-    return Object.keys(this.remoteSites)
-  }
-
   addSite (domain, key, options, done) {
     if (!done) {
       done = options
@@ -460,6 +451,18 @@ module.exports = class DatBoi extends EventEmitter {
         }
       }
     ], done)
+  }
+
+  get sites () {
+    let localSites = Object.values(this.localSites)
+    let remoteSites = Object.values(this.remoteSites).map((sites) => {
+      return Object.values(sites)
+    }).reduce((a, b) => { return a.concat(b) }, [])
+    return localSites.concat(remoteSites)
+  }
+
+  get siteLists () {
+    return Object.keys(this.remoteSites)
   }
 
   static createSiteApp (site = {}) {
