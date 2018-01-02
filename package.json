@@ -1,6 +1,6 @@
 {
   "name": "@garbados/dat-boi",
-  "version": "1.0.7-alpha",
+  "version": "1.0.8-alpha",
   "description": "A web server that maps P2P Dat archives with arbitrary domain addresses and rehosts them locally.",
   "main": "./index.js",
   "bin": "./cli.js",
