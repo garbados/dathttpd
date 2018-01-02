@@ -239,14 +239,18 @@ module.exports = class DatBoi extends EventEmitter {
       fs.writeFile.bind(fs, joinDir('dat.json'), JSON.stringify({ sites: this.sites }))
     ], (err) => {
       if (err) return done(err)
-      this.multidat.create(this.directory, this.datOptions, (err, dat) => {
-        if (err) return done(err)
-        dat.importFiles((err) => {
-          if (err) return done(err)
-          debug(`Peering local sitelist at dat://${dat.key.toString('hex')}`)
-          done()
-        })
-      })
+      async.waterfall([
+        (done) => {
+          this.multidat.create(this.directory, this.datOptions, done)
+        },
+        (dat, done) => {
+          dat.importFiles((err) => {
+            if (err) return done(err)
+            debug(`Peering local sitelist at dat://${dat.key.toString('hex')}`)
+            done()
+          })
+        }
+      ], done)
     })
   }
 
