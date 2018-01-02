@@ -56,24 +56,20 @@ require('yargs')
       })
     },
     handler: (argv) => {
-      let boi = new DatBoi(getOptions(argv))
-      boi.start(function (err) {
-        if (err) {
-          console.log(chalk.red(err))
+      let boi = DatBoi.start(getOptions(argv))
+      boi.on('ready', () => {
+        if (boi.peerSites) {
+          let dat = boi.multidat.list().filter((dat) => {
+            return dat.path === boi.directory
+          })[0]
+          console.log('Peering known sites at dat://%s', dat.key.toString('hex'))
+        }
+        if (!boi.serve) {
+          console.log('Now peering known sites.')
+          printSites(boi)
         } else {
-          if (boi.peerSites) {
-            let dat = boi.multidat.list().filter((dat) => {
-              return dat.path === boi.directory
-            })[0]
-            console.log('Peering known sites at dat://%s', dat.key.toString('hex'))
-          }
-          if (!boi.serve) {
-            console.log('Now peering known sites.')
-            printSites(boi)
-          } else {
-            console.log('Now sharing known sites on port %i.', boi.port)
-            printSites(boi)
-          }
+          console.log('Now sharing known sites on port %i.', boi.port)
+          printSites(boi)
         }
       })
     }

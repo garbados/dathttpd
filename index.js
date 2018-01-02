@@ -129,7 +129,7 @@ module.exports = class DatBoi extends EventEmitter {
     })
   }
 
-  start (done) {
+  start (done = function () {}) {
     debug('Starting...')
     async.series([
       this.init.bind(this),
