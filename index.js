@@ -42,6 +42,10 @@ Object.values = Object.values || function (obj) {
 }
 
 module.exports = class DatBoi extends EventEmitter {
+  /**
+   * @class DatBoi
+   * @param  {Object} options [description]
+   */
   constructor (options = { config: CFG_PATH, directory: DIR_PATH }) {
     super()
     debug('Creating new DatBoi with config: %j', options)

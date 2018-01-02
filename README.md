@@ -7,11 +7,11 @@
 [![greenkeeper](https://badges.greenkeeper.io/garbados/dat-boi.svg)](https://greenkeeper.io/)
 [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/feross/standard)
 
-A local-only, offline-first web server for [Dat](https://datprotocol.com) archives.
+A web server for [Dat](https://datprotocol.com) archives. DatBoi maps archive URLs to domain names and serves them on your local machine, facilitating a p2p web behind human-readable addresses without the use of centralized servers or external DNS resolution. Access, create, and share an intentional web!
 
 Here's a usage example:
 
-```
+```bash
 $ npm i -g @garbados/dat-boi
 $ dat-boi start &
 $ dat-boi add home.bovid dat://c33bc8d7c32a6e905905efdbf21efea9ff23b00d1c3ee9aea80092eaba6c4957/
@@ -34,7 +34,7 @@ To do this, DatBoi binds to port 80 and adds entries to your local hostfile that
 
 You can also use DatBoi to share your domains with others, and to add their domains to your local instance. Here is an example:
 
-```
+```bash
 $ dat-boi add-list [key]
 # curl secret.blog
 <!DOCTYPE html>
@@ -47,7 +47,7 @@ The goal is to allow people to share content and web applications at human-reada
 
 You can install DatBoi with [npm](https://www.npmjs.com/):
 
-```
+```bash
 npm i -g @garbados/dat-boi
 ```
 
@@ -57,7 +57,7 @@ Now you can run `dat-boi`. Try running `dat-boi -h` for usage information.
 
 Just run `dat-boi` to get started:
 
-```
+```bash
 dat-boi
 ```
 
@@ -65,9 +65,9 @@ dat-boi
 
 Once `dat-boi` is running, you can run other CLI commands to update its configuration, such as by adding sites. The running instance watches its config for changes and updates itself accordingly. So, you can immediately start adding sites and sitelists:
 
-```
-$ dat-boi add <domain> <url>
-$ dat-boi add-list <url>
+```bash
+dat-boi add <domain> <url>
+dat-boi add-list <url>
 ```
 
 To daemonify DatBoi on systems that use systemd, you can use [add-to-systemd](https://www.npmjs.com/package/add-to-systemd):
@@ -83,15 +83,17 @@ add-to-systemd dat-boi --user $(whoami) `which dat-boi`
 sudo systemctl start dat-boi
 ```
 
-### Options and Commands
+### CLI Usage
 
-Options:
+Run `dat-boi -h` for help, or `dat-boi [command] -h` for help with a specific command. Or, use this:
+
+#### Options:
 
 - `-c, --config`: Path to a JSON file to use to configure DatBoi. Default: `~/.dat-boi.json`
 - `-d, --directory`: Path to a directory in which to store archives and metadata. Default: `~/.dat-boi`
 - `-h, --help`: Print usage information and exit.
 
-Commands:
+#### Commands:
 
 - `start [options]`: An alias of the default command. Starts the server. It has some options specific to it:
 	- `-p, --port <number>`: Specifies the port for DatBoi to listen on. Defaults to port 80.
@@ -103,8 +105,6 @@ Commands:
 - `remove <domain>`: Remove a site and its hostfile entry. If no other site references its archive, it will be removed too.
 - `add-list <url>`: Add a sitelist and all of its site entries.
 - `remove-list <url>`: Remove a sitelist and all of its site entries. Archives which are not referenced by any remaining site are also removed.
-
-You can also run `dat-boi -h` to print this usage information.
 
 ## Contributing
 
