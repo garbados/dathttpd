@@ -317,18 +317,24 @@ module.exports = class DatBoi extends EventEmitter {
 
       async.waterfall([
         (done) => {
+          debug('Retrieving sitelist archive...')
           var dat = dats.find(d => d.key.toString('hex') === key)
           if (dat) {
             done(null, dat)
           } else {
+            debug('Archive does not exist. Creating...')
             let datPath = path.join(this.directory, key)
             let datOptions = _.extend({}, this.datOptions, { key, sparse: true })
             this.multidat.create(datPath, datOptions, done)
           }
         },
         (dat, done) => {
+          debug('Retrieved sitelist. Reading manifest...')
           dat.joinNetwork(this.netOptions)
-          this.multidat.readManifest(dat, done)
+          this.multidat.readManifest(dat, (err, datjson) => {
+            dat.close()
+            done(err, datjson)
+          })
         },
         (datjson, done) => {
           let sites = {}

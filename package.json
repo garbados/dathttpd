@@ -30,7 +30,6 @@
     "async": "^2.6.0",
     "chalk": "^2.3.0",
     "debug": "^3.1.0",
-    "discovery-channel": "git+https://github.com/garbados/discovery-channel.git",
     "express": "^4.15.4",
     "hostile": "^1.3.0",
     "lodash": "^4.17.4",
