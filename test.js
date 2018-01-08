@@ -2,18 +2,22 @@
 
 const async = require('async')
 const DatBoi = require('.')
-const fs = require('fs')
+const mkdirp = require('mkdirp')
 const rimraf = require('rimraf')
 const tap = require('tap')
 
 const OPTIONS = {
   port: 10001,
-  config: '.test-boi.json',
-  directory: '.test-boi',
+  config: 'fixtures/.test-boi.json',
+  directory: 'fixtures/.test-boi',
   modifyHostfile: false,
   net: {
     upload: false,
-    download: false
+    download: false,
+    utp: false
+  },
+  dat: {
+    live: false
   }
 }
 
@@ -22,11 +26,12 @@ const SITE = {
   hostname: 'test.site'
 }
 
+tap.beforeEach((done) => {
+  mkdirp('fixtures', done)
+})
+
 tap.afterEach((done) => {
-  async.parallel([
-    fs.unlink.bind(fs, OPTIONS.config),
-    rimraf.bind(rimraf, OPTIONS.directory)
-  ], done)
+  rimraf('fixtures', done)
 })
 
 tap.test({
