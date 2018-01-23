@@ -41,7 +41,7 @@
     "toiletdb": "^1.4.0",
     "untildify": "^3.0.2",
     "vhost": "^3.0.2",
-    "yargs": "^10.0.3"
+    "yargs": "^11.0.0"
   },
   "devDependencies": {
     "dependency-check": "^3.0.0",
