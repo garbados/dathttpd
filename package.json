@@ -28,7 +28,7 @@
   "homepage": "https://github.com/garbados/dat-boi#readme",
   "dependencies": {
     "async": "^2.6.0",
-    "chalk": "^2.3.0",
+    "chalk": "^2.3.2",
     "debug": "^3.1.0",
     "express": "^4.15.4",
     "hostile": "^1.3.0",
