@@ -38,7 +38,7 @@
     "multidat": "^5.0.1",
     "rimraf": "^2.6.2",
     "serve-index": "^1.8.0",
-    "toiletdb": "^1.4.0",
+    "toiletdb": "^2.0.0",
     "untildify": "^3.0.2",
     "vhost": "^3.0.2",
     "yargs": "^10.0.3"
