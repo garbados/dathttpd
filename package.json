@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "dependency-check": "^3.0.0",
-    "standard": "^10.0.3",
+    "standard": "^13.0.1",
     "tap": "^11.0.1"
   }
 }
