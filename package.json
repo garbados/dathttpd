@@ -44,7 +44,7 @@
     "yargs": "^10.0.3"
   },
   "devDependencies": {
-    "dependency-check": "^3.0.0",
+    "dependency-check": "^4.1.0",
     "standard": "^10.0.3",
     "tap": "^11.0.1"
   }
